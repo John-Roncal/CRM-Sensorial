@@ -1,0 +1,146 @@
+﻿/* Contenedor principal */
+.contacto-page {
+    background: #ffffff;
+    color: #111;
+    padding: 0;
+    min-height: 72vh;
+}
+
+/* Si usas container-fluid, no limites el ancho aquí */
+.contacto-container {
+    width: 100%;
+    max-width: 1200px; /* opcional: si quieres un max ancho centralizado */
+    margin: 0 auto;
+}
+
+/* La columna izquierda ocupa la mitad; la imagen la cubre y se centra en el eje vertical */
+.contacto-image-col {
+    min-height: 72vh; /* altura de la sección */
+    background-size: cover; /* llena la columna (puede recortar) */
+    background-position: left center; /* importante: centrado vertical y alineado a la izquierda */
+    background-repeat: no-repeat;
+    position: relative;
+    overflow: hidden;
+}
+
+    /* overlay opcional para contraste */
+    .contacto-image-col::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,0.06);
+        pointer-events: none;
+    }
+
+
+/* Columna derecha: información */
+.contacto-info-col {
+    background: #fff;
+    display: flex;
+    align-items: center;
+    min-height: 72vh;
+    padding-top: 36px;
+    padding-bottom: 36px;
+}
+
+.contacto-info {
+    max-width: 520px;
+    margin: 0 auto;
+}
+
+/* Titulares */
+.contacto-title {
+    font-family: "Playfair Display", Georgia, "Times New Roman", serif;
+    font-size: 3rem;
+    font-weight: 400;
+    margin: 0 0 18px 0;
+    color: #111;
+}
+
+/* Bloques de contacto */
+.contacto-block {
+    margin-bottom: 18px;
+}
+
+.block-title {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #666;
+    margin: 0 0 6px 0;
+    text-transform: uppercase;
+}
+
+.block-text {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    margin: 0;
+    color: #222;
+}
+
+/* Enlaces y lista social */
+.contact-link {
+    color: #0b5ed7;
+    text-decoration: none;
+}
+
+    .contact-link:hover, .contact-link:focus {
+        text-decoration: underline;
+        color: #084298;
+    }
+
+.social-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 12px;
+}
+
+    .social-list li {
+        font-family: Georgia, "Times New Roman", serif;
+        color: #222;
+        font-size: 1rem;
+    }
+
+/* Responsive */
+@media (max-width: 991.98px) {
+    .contacto-image-col {
+        display: none;
+    }
+    /* ya lo controla tu clase d-none d-lg-block */
+    .contacto-info-col {
+        min-height: auto;
+        padding-top: 36px;
+        padding-bottom: 36px;
+    }
+
+    .contacto-title {
+        font-size: 2.25rem;
+        text-align: center;
+    }
+
+    .social-list {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        text-align: left;
+    }
+}
+
+@media (max-width: 576px) {
+    .contacto-info {
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+
+    .block-text {
+        font-size: 1rem;
+    }
+}
+
+/* Evita márgenes inferiores inesperados en la vista */
+main[role="main"] > :last-child {
+    margin-bottom: 0;
+}

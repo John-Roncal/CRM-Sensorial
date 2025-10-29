@@ -1,0 +1,60 @@
+﻿@{
+    Layout = "_Layout";
+}
+
+/*
+  Esta vista carga verify.js que:
+   - detecta si la URL es un sign-in link de Firebase,
+   - completa signInWithEmailLink,
+   - muestra el panel para crear contraseña (#panelCrearPassword),
+   - envía idToken al endpoint POST /Registro/Finalizar.
+*/
+
+<h1>Verificación de correo</h1>
+
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card mt-3 shadow-sm">
+            <div class="card-body">
+                <div id="mensaje" class="mb-3 d-none"></div>
+
+                <div id="loading" class="mb-3">
+                    <p>Procesando enlace... por favor espera.</p>
+                </div>
+
+                <!-- Panel que aparece cuando el usuario se ha autenticado con el link -->
+                <div id="panelCrearPassword" style="display:none;">
+                    <h5>Crear contraseña</h5>
+                    <p class="text-muted">Introduce una contraseña para usar tu cuenta con email/contraseña.</p>
+
+                    <form id="formCrearPassword" autocomplete="new-password">
+                        <div class="mb-3">
+                            <label for="Password" class="form-label">Contraseña</label>
+                            <input id="Password" name="Password" type="password" class="form-control" minlength="6" required />
+                        </div>
+                        <div class="mb-3">
+                            <label for="ConfirmPassword" class="form-label">Confirmar contraseña</label>
+                            <input id="ConfirmPassword" name="ConfirmPassword" type="password" class="form-control" minlength="6" required />
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a class="btn btn-link" href="~/">Cancelar</a>
+                            <button type="submit" class="btn btn-primary">Crear contraseña y continuar</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="nota" class="mt-3 text-muted">
+                    Si el enlace no funciona pide que te reenvíen el correo desde la pantalla de registro.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Firebase SDK (compat) y nuestro script verify.js -->
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+
+<script src="~/js/firebase-config.js"></script>
+<script src="~/js/verify.js"></script>

@@ -1,0 +1,22 @@
+/* Asegura que la página use toda la altura y no haya margen por defecto */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+/* Main debe crecer y empujar el footer hacia abajo */
+main[role="main"] {
+    flex: 1 0 auto;
+}
+
+/* Evita que el footer añada espacio inesperado */
+footer {
+    margin-top: 0;
+    flex-shrink: 0;
+}
+
+/* Protege contra márgenes colapsados del último elemento en main */
+main[role="main"] > :last-child {
+    margin-bottom: 0;
+}

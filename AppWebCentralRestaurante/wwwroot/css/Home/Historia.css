@@ -1,0 +1,85 @@
+﻿/* Tipografía y espaciado */
+.historia-page {
+    background: #fff;
+    color: #111;
+}
+
+/* Cabecera grande centrada tipo serif */
+.historia-header {
+    text-align: center;
+    /*padding-top: 24px;*/
+    padding-bottom: 12px;
+}
+
+    .historia-header h1 {
+        font-family: "Playfair Display", Georgia, "Times New Roman", serif;
+        font-size: 4.5rem; /* ajusta según necesites */
+        margin: 0;
+        font-weight: 400;
+    }
+
+/* Contenido: limitar ancho y espaciado */
+.historia-content {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+/* Texto de columnas */
+.historia-text p {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.03rem;
+    line-height: 1.8;
+    margin: 0 auto;
+    max-width: 340px; /* ancho similar al de la imagen de ejemplo */
+    text-align: justify;
+}
+
+/* Imagen central */
+.historia-figure {
+    margin: 0;
+    padding: 0 0 18px 0;
+}
+
+.historia-img {
+    width: 260px;
+    height: 260px;
+    object-fit: cover;
+    display: block;
+    margin: 0 auto;
+    box-shadow: none;
+}
+
+/* Pie central (texto debajo de la imagen) */
+.historia-caption {
+    font-family: Georgia, serif;
+    font-size: 0.98rem;
+    line-height: 1.6;
+    max-width: 320px;
+    margin: 18px auto 0 auto;
+    text-align: center;
+}
+
+/* Responsive: en pantallas pequeñas apilar verticalmente */
+@media (max-width: 767.98px) {
+    .historia-header h1 {
+        font-size: 2.8rem;
+    }
+
+    .historia-img {
+        width: 220px;
+        height: 220px;
+    }
+
+    .historia-text p {
+        max-width: 100%;
+        text-align: left;
+        margin-bottom: 18px;
+    }
+
+    .historia-caption {
+        max-width: 100%;
+        padding: 0 12px;
+    }
+}

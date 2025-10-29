@@ -1,0 +1,47 @@
+﻿@model ReservationDraft
+@{
+    Layout = "_Layout";
+
+}
+
+<div class="container mt-4">
+    <h3>Antes de continuar — 3 preguntas rápidas</h3>
+    <p class="text-muted">Nos ayudan a recomendar la experiencia adecuada y acelerar la reserva.</p>
+
+    <form id="frm3Preguntas" method="post" asp-controller="Registro" asp-action="GuardarPreguntas">
+        <div class="mb-3">
+            <label class="form-label">¿Cuántos comensales?</label>
+            <input type="number" name="Personas" min="1" value="2" class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">¿Qué experiencia te interesa?</label>
+            <select name="ExperienciaId" class="form-select" required>
+                <option value="">Seleccionar...</option>
+                @* Asume que el controlador entrega ViewData["Experiencias"] con lista *@
+                @foreach (var e in (IEnumerable<AppWebCentralRestaurante.Models.Experiencia>)ViewData["Experiencias"])
+                {
+                    <option value="@e.Id">@e.Codigo - @e.Nombre</option>
+                }
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Restricciones o alergias (opcional)</label>
+            <textarea name="Restricciones" class="form-control" rows="2"></textarea>
+        </div>
+
+        <input type="hidden" name="NombreUsuario" value="@Model?.NombreUsuario ?? " " " />
+
+        <div class="d-flex justify-content-between">
+            <a class="btn btn-outline-secondary" href="~/">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Continuar al asistente</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        // nada especial; el form POST hace el resto
+    </script>
+}

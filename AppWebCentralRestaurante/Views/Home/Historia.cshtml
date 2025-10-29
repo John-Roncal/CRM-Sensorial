@@ -1,0 +1,44 @@
+﻿@{
+    Layout = "_Layout";
+}
+
+<!-- Opcional: si prefieres cargar CSS desde aquí en lugar de un archivo separado -->
+<link rel="stylesheet" href="~/css/Home/historia.css" asp-append-version="true" />
+
+<section class="historia-page">
+    <header class="historia-header">
+        <h1>Historia</h1>
+    </header>
+
+    <div class="container historia-content">
+        <div class="row align-items-start justify-content-center">
+            <!-- Columna izquierda -->
+            <div class="col-md-4 col-sm-12 historia-text">
+                <p>
+                    Desde 2009, en Central nos dedicamos a explorar la riqueza natural del Perú a través de la gastronomía.
+                    Bajo la visión de Virgilio Martínez, convertimos cada plato en una expresión de nuestros ecosistemas y culturas.
+                </p>
+            </div>
+
+            <!-- Columna central (imagen + texto debajo) -->
+            <div class="col-md-4 col-sm-12 text-center">
+                <figure class="historia-figure">
+                    <img src="~/images/imagenHistoria.jpg" alt="Platos" class="historia-img img-fluid" />
+                </figure>
+
+                <p class="historia-caption">
+                    Hoy somos referentes mundiales. En 2023, Central fue reconocido como el mejor restaurante del mundo,
+                    reafirmando nuestro compromiso con la innovación y nuestras raíces.
+                </p>
+            </div>
+
+            <!-- Columna derecha -->
+            <div class="col-md-4 col-sm-12 historia-text">
+                <p>
+                    Trabajamos con comunidades locales y usamos ingredientes únicos de la costa, sierra y selva,
+                    creando experiencias que conectan ciencia, tradición y sabor.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>

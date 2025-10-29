@@ -1,0 +1,25 @@
+﻿@model AppWebCentralRestaurante.Controllers.RegistroController.RevisaCorreoViewModel
+@{
+    Layout = "_Layout";
+}
+
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card mt-4 shadow-sm">
+            <div class="card-body text-center">
+                <h3 class="mb-3">Revisa tu correo</h3>
+
+                <p>Te enviamos un enlace de verificación a:</p>
+                <p><strong>@Model.Email</strong></p>
+
+                <p class="text-muted">
+                    Abre el correo y haz clic en el enlace para continuar. Si no llega, revisa la carpeta Spam.
+                </p>
+
+                <div class="mt-3">
+                    <a href="~/" class="btn btn-outline-secondary">Volver</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

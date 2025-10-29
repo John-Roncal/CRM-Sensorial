@@ -1,0 +1,54 @@
+﻿@model AppWebCentralRestaurante.Controllers.RegistroController.RegistroViewModel
+@{
+    Layout = "_Layout";
+}
+
+<h1>Registrarme</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <p class="text-muted">
+                    Ingresa tu nombre y correo. Recibirás un enlace por correo para continuar el registro.
+                </p>
+
+                <!-- Form manejado por wwwroot/js/registro.js -->
+                <form id="formRegistro" autocomplete="off">
+                    <div class="mb-3">
+                        <label for="Nombre" class="form-label">Nombre</label>
+                        <input id="Nombre" name="Nombre" class="form-control" maxlength="150" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="Email" class="form-label">Correo electrónico</label>
+                        <input id="Email" name="Email" type="email" class="form-control" maxlength="256" required />
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a class="btn btn-link" href="~/">Cancelar</a>
+                        <button type="submit" class="btn btn-primary">Registrarme</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="alert alert-info">
+            <h5>Cómo funciona</h5>
+            <ul class="mb-0">
+                <li>Recibirás un enlace de acceso en tu correo (lo envía Firebase).</li>
+                <li>Al abrirlo, completarás la verificación y crearás una contraseña segura.</li>
+                <li>Luego se creará tu cuenta local y entrarás automáticamente.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Firebase SDK (compat) y nuestros scripts -->
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+
+<script src="~/js/firebase-config.js"></script>
+<script src="~/js/registro.js"></script>

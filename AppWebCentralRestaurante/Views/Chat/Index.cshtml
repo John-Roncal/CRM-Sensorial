@@ -1,0 +1,83 @@
+﻿@using System.Text.Json
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    Layout = "_Layout";
+    var initial = ViewData["InitialBot"] as string ?? "Hola, ¿en qué puedo ayudarte?";
+    var draftObj = ViewData["Draft"];
+    // serializar con opciones para que JSON sea legible por JS; si draftObj es null, pasar objeto vacío
+    var initialDraftJson = JsonSerializer.Serialize(draftObj ?? new { }, new JsonSerializerOptions { PropertyNamingPolicy = null });
+
+    // Aquí usamos ViewContext.HttpContext para evitar ambigüedades con el tipo HttpContext
+    var antiTokens = Antiforgery.GetAndStoreTokens(ViewContext.HttpContext);
+    var requestToken = antiTokens?.RequestToken ?? "";
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+
+    <!-- Anti-forgery token (chat.js lo leerá desde meta[name="csrf-token"]) -->
+    <meta name="csrf-token" content="@requestToken" />
+
+    <!-- Chat CSS -->
+    <link rel="stylesheet" href="~/css/chat.css" asp-append-version="true" />
+</head>
+
+
+
+
+
+<body>
+    <main class="container" style="padding:18px; max-width:1100px; margin:0 auto;">
+        <h1>@ViewData["Title"]</h1>
+
+        <div class="layout" role="application" aria-labelledby="chat-heading">
+            <!-- Chat column -->
+            <section class="chat-column panel" aria-label="Chat principal">
+                <div id="chatWindow" class="chat-window" aria-live="polite" role="log">
+                    <div class="msg bot">
+                        <div class="meta">Bot • ahora</div>
+                        <div class="body" id="initialBotText">@Html.Raw(System.Text.Encodings.Web.HtmlEncoder.Default.Encode(initial).Replace("\n", "<br/>"))</div>
+                    </div>
+                </div>
+
+                <form id="chatForm" autocomplete="off" class="panel" onsubmit="return false;">
+                    <input id="pregunta" name="pregunta" class="text-input" type="text" placeholder="Escribe tu mensaje..." aria-label="Escribe tu mensaje" />
+                    <button id="sendBtn" class="btn" type="submit">Enviar</button>
+                </form>
+            </section>
+
+            <!-- Side column: draft -->
+            <aside class="side-column panel draft-panel" aria-label="Estado de la reserva">
+                <h4 id="draft-title">Estado de la reserva</h4>
+                <div id="draftStatus" class="p-2">
+                    <div class="small text-muted">Aquí verás el progreso: experiencia, personas, restricciones, día y hora.</div>
+                </div>
+
+                <hr />
+
+                <div>
+                    <div class="small text-muted">Consejos</div>
+                    <ul class="small">
+                        <li>Responde con claridad el número de personas.</li>
+                        <li>Indica restricciones alimentarias si las tienes.</li>
+                        <li>Puedes preguntar por disponibilidades o sugerencias de plato.</li>
+                    </ul>
+                </div>
+            </aside>
+        </div>
+
+        <!-- contenedor para el modal resumen (usado por chat.js) -->
+        <div id="resumenContainer"></div>
+    </main>
+
+    <!-- Si quieres que la página cargue un draft inicial (de ViewData["Draft"]), el script JSON lo lee chat.js -->
+    <script id="initialDraftJson" type="application/json">@Html.Raw(initialDraftJson)</script>
+
+    <!-- Chat script (asegúrate de que este archivo sea el que te pasé actualizado) -->
+    <script src="~/js/chat.js" asp-append-version="true"></script>
+</body>
+</html>

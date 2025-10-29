@@ -1,0 +1,73 @@
+﻿@model AppWebCentralRestaurante.Controllers.ClienteController.ClienteViewModel
+@{
+    Layout = "_Layout";
+}
+
+<div class="container" style="max-width:1100px;margin-top:18px;">
+    <h2>@ViewData["Title"]</h2>
+
+    <div style="display:flex;gap:18px;margin-top:12px;flex-wrap:wrap;">
+        <!-- Column izquierda: historial -->
+        <div style="flex:1 1 65%; min-width:320px;">
+            <div style="background:#fff;border:1px solid #e6e6e6;border-radius:8px;padding:14px;">
+                <h4>Historial de reservas</h4>
+                @if (!Model.Reservas.Any())
+                {
+                    <div class="small muted">No tienes reservas aún.</div>
+                }
+                else
+                {
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead>
+                            <tr style="text-align:left;border-bottom:1px solid #eee;">
+                                <th style="padding:8px;">ID</th>
+                                <th style="padding:8px;">Experiencia</th>
+                                <th style="padding:8px;">Día y hora</th>
+                                <th style="padding:8px;">Comensales</th>
+                                <th style="padding:8px;">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in Model.Reservas)
+                            {
+                                <tr style="border-bottom:1px solid #f5f5f5;">
+                                    <td style="padding:10px;vertical-align:middle">@r.Id</td>
+                                    <td style="padding:10px;vertical-align:middle">@((r.Experiencia != null) ? r.Experiencia.Nombre : r.ExperienciaId.ToString())</td>
+                                    <td style="padding:10px;vertical-align:middle">@r.FechaHora.ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td style="padding:10px;vertical-align:middle">@r.NumComensales</td>
+                                    <td style="padding:10px;vertical-align:middle">@r.Estado</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+
+        <!-- Column derecha: preferencias + boton chatbot -->
+        <div style="flex:0 1 320px; min-width:260px;">
+            <div style="background:#fff;border:1px solid #e6e6e6;border-radius:8px;padding:14px;margin-bottom:12px;">
+                <h4>Mis preferencias</h4>
+                @if (Model.Preferencia == null)
+                {
+                    <div class="small muted">No ha guardado preferencias todavía.</div>
+                }
+                else
+                {
+                    <div style="font-family:monospace;white-space:pre-wrap;max-height:300px;overflow:auto;border:1px solid #f0f0f0;padding:8px;border-radius:6px;">
+                        @Html.Raw(System.Net.WebUtility.HtmlEncode(Model.PreferenciaJsonPretty ?? Model.Preferencia.DatosJson))
+                    </div>
+                    <div style="margin-top:8px;color:#666;font-size:0.9rem;">
+                        Última actualización: @((Model.Preferencia.ActualizadoEn ?? Model.Preferencia.CreadoEn).ToString("g"))
+                    </div>
+                }
+            </div>
+
+            <div style="background:#fff;border:1px solid #e6e6e6;border-radius:8px;padding:14px;">
+                <h4>Hacer nueva reserva</h4>
+                <p class="small muted">Inicia una nueva reserva mediante el asistente conversacional.</p>
+                <a class="btn" href="@Url.Action("Index", "Chat")" style="display:inline-block;padding:10px 14px;background:#0d6efd;color:#fff;border-radius:6px;text-decoration:none;">Ir al Chatbot</a>
+            </div>
+        </div>
+    </div>
+</div>

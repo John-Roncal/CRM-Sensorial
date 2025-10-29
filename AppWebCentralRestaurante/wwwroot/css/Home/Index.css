@@ -1,0 +1,53 @@
+﻿/* wwwroot/css/Home/Index.css */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: transparent;
+}
+
+/* HERO: pantalla completa (1 pantalla) */
+.hero-section {
+    position: fixed; /* <-- corregido */
+    width: 100vw;
+    height: 100vh;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    background-size: cover; /* llena y puede recortar algunas partes */
+    background-position: center center;
+    background-repeat: no-repeat;
+    filter: brightness(0.9);
+    z-index: 0;
+}
+
+    /* Textos en la hero */
+    .hero-section .text-bottom-left,
+    .hero-section .text-bottom-right {
+        position: absolute;
+        bottom: 100px;
+        color: #fff;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-shadow: 1px 1px 6px rgba(0,0,0,0.8);
+        z-index: 2;
+    }
+
+    .hero-section .text-bottom-left {
+        left: 30px;
+    }
+
+    .hero-section .text-bottom-right {
+        right: 30px;
+    }
+
+/* Asegurar que main comience justo después de la hero */
+main.container {
+    background: transparent;
+    padding-top: 1.5rem;
+}
+
+/* Por si quieres que el footer quede por encima visual en caso de solapamiento accidental */
+footer {
+    position: relative;
+    z-index: 3;
+}

@@ -1,0 +1,61 @@
+﻿@{
+    Layout = "_Layout";
+}
+
+<link rel="stylesheet" href="~/css/Home/Contacto.css" asp-append-version="true" />
+
+<section class="contacto-page">
+    <div class="container-fluid contacto-container">
+        <div class="row g-0 align-items-stretch">
+            <!-- Izquierda: fondo que ocupa media pantalla en pantallas grandes -->
+            <!-- en la columna izquierda -->
+            <div class="col-12 col-lg-6 contacto-image-col d-none d-lg-block"
+                 style="background-image: url('@Url.Content("~/images/imagenContacto.jpg")')"
+                 role="img" aria-label="Textil andino y plato sobre la textura"></div>
+
+
+            <!-- Derecha: información de contacto -->
+            <div class="col-12 col-lg-6 contacto-info-col d-flex align-items-center">
+                <div class="contacto-info px-4 py-5">
+                    <h2 class="contacto-title">CONTACTO</h2>
+
+                    <div class="contacto-block">
+                        <h3 class="block-title">DIRECCIÓN</h3>
+                        <p class="block-text">Av. Pedro de Osma 301, Barranco, Lima (Perú)</p>
+                    </div>
+
+                    <div class="contacto-block">
+                        <h3 class="block-title">RESERVAS</h3>
+                        <p class="block-text">
+                            <a href="mailto:reservas@centralrestaurante.com.pe" class="contact-link">reservas@centralrestaurante.com.pe</a>
+                        </p>
+                    </div>
+
+                    <div class="contacto-block">
+                        <h3 class="block-title">SOCIAL MEDIA</h3>
+                        <ul class="social-list">
+                            <li>CentralRest</li>
+                            <li>VirgilioCentral</li>
+                            <li>Mater_In</li>
+                            <li>Mits.Earth</li>
+                        </ul>
+                    </div>
+
+                    <div class="contacto-block">
+                        <h3 class="block-title">COMUNICACIONES Y PROYECTOS</h3>
+                        <p class="block-text">
+                            <a href="mailto:ralelgira@centralrestaurante.com.pe" class="contact-link">ralelgira@centralrestaurante.com.pe</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Inline CSS para establecer la imagen de fondo usando Url.Content -->
+<style>
+    .contacto-image-col {
+        background-image: url('@Url.Content("~/images/imagenContacto.jpg")');
+    }
+</style>

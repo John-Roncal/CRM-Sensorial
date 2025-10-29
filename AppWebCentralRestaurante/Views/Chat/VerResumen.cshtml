@@ -1,0 +1,142 @@
+﻿@model AppWebCentralRestaurante.Models.Reserva
+@using System.Globalization
+@{
+    ViewData["Title"] = "Resumen de Reserva";
+    string experienciaNombre = Model.Experiencia?.Nombre ?? (Model.ExperienciaId > 0 ? Model.ExperienciaId.ToString() : "No especificada");
+    string fechaHoraStr = (Model.FechaHora == default || Model.FechaHora == DateTime.MinValue) ? "No especificado" : Model.FechaHora.ToString("yyyy-MM-dd HH:mm");
+    decimal precioUnit = Model.Experiencia?.Precio ?? 0m;
+    decimal total = precioUnit * (Model.NumComensales > 0 ? Model.NumComensales : 1);
+    var moneda = new CultureInfo("es-PE");
+}
+
+<div class="container my-4" style="max-width:880px;">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h2 class="card-title mb-3">Resumen de tu reserva</h2>
+
+            <dl class="row">
+                <dt class="col-sm-4">Reserva ID</dt>
+                <dd class="col-sm-8">@Model.Id</dd>
+
+                <dt class="col-sm-4">Nombre de la reserva</dt>
+                <dd class="col-sm-8">@(!string.IsNullOrWhiteSpace(Model.NombreReserva) ? Model.NombreReserva : "Reserva")</dd>
+
+                <dt class="col-sm-4">Experiencia</dt>
+                <dd class="col-sm-8">
+                    @if (Model.Experiencia != null)
+                    {
+                        <div>
+                            <strong>@Model.Experiencia.Nombre</strong>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Model.Experiencia.Descripcion))
+                        {
+                            <div class="small text-muted mt-1">@Model.Experiencia.Descripcion</div>
+                        }
+                    }
+                    else
+                    {
+                        <span>@experienciaNombre</span>
+                    }
+                </dd>
+
+                <dt class="col-sm-4">Día y hora</dt>
+                <dd class="col-sm-8">@fechaHoraStr</dd>
+
+                <dt class="col-sm-4">Personas</dt>
+                <dd class="col-sm-8">@Model.NumComensales</dd>
+
+                <dt class="col-sm-4">Restricciones</dt>
+                <dd class="col-sm-8">@(!string.IsNullOrWhiteSpace(Model.Restricciones) ? Model.Restricciones : "Ninguna")</dd>
+
+                <dt class="col-sm-4">Precio por persona</dt>
+                <dd class="col-sm-8">@((precioUnit > 0) ? precioUnit.ToString("C", moneda) : "No disponible")</dd>
+
+                <dt class="col-sm-4">Total estimado</dt>
+                <dd class="col-sm-8">@((precioUnit > 0) ? total.ToString("C", moneda) : "—")</dd>
+
+                <dt class="col-sm-4">Estado</dt>
+                <dd class="col-sm-8">
+                    <span class="badge @(Model.Estado == "pendiente" ? "bg-warning text-dark" : "bg-secondary")">@Model.Estado</span>
+                </dd>
+
+                <dt class="col-sm-4">Creada</dt>
+                <dd class="col-sm-8">@Model.CreadoEn.ToString("g")</dd>
+            </dl>
+
+            <div class="d-flex justify-content-between mt-4">
+                <div>
+                    <a asp-controller="Chat" asp-action="Index" class="btn btn-outline-primary me-2">Volver al chat</a>
+                    <a asp-controller="Cliente" asp-action="Index" class="btn btn-outline-secondary">Ir a mis reservas</a>
+                </div>
+
+                <div>
+                    @if (User?.Identity?.IsAuthenticated == true)
+                    {
+                        @* token antiforgery para que JS/Fetch pueda leer el input si se utiliza ese método *@
+                        @Html.AntiForgeryToken()
+                        <button id="savePrefsBtn" class="btn btn-success">Guardar como preferencia</button>
+                        <span id="savePrefsStatus" class="ms-2 text-muted small" style="display:none;"></span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const btn = document.getElementById('savePrefsBtn');
+            if (!btn) return;
+
+            const status = document.getElementById('savePrefsStatus');
+
+            btn.addEventListener('click', async function () {
+                btn.disabled = true;
+                status.style.display = 'inline';
+                status.textContent = 'Guardando...';
+
+                // Construir JSON con lo que consideramos "preferencias"
+                const datos = {
+                    Personas: @Model.NumComensales,
+                    ExperienciaId: @Model.ExperienciaId,
+                    Restricciones: "@(Model.Restricciones?.Replace("\"", "\\\"") ?? "")",
+                    NombreReserva: "@(Model.NombreReserva?.Replace("\"", "\\\"") ?? "")"
+                };
+
+                // Obtener token antiforgery si el layout o Html.AntiForgeryToken lo renderizó como input
+                const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+                const token = tokenInput ? tokenInput.value : null;
+
+                try {
+                    const form = new FormData();
+                    form.append('datosJson', JSON.stringify(datos));
+                    if (token) form.append('__RequestVerificationToken', token);
+
+                    // Endpoint: según tu implementación puede ser /Preferencias/Guardar o /Chat/GuardarPreferenciasDesdeDraft
+                    // Aquí uso /Preferencias/Guardar para guardar preferencias basada en la reserva actual.
+                    const res = await fetch('/Preferencias/Guardar', {
+                        method: 'POST',
+                        body: form
+                    });
+
+                    if (res.ok) {
+                        const j = await res.json().catch(() => null);
+                        status.textContent = (j && j.message) ? j.message : 'Preferencias guardadas';
+                        setTimeout(() => status.style.display = 'none', 2500);
+                    } else {
+                        const txt = await res.text().catch(() => '');
+                        status.textContent = 'Error guardando preferencias: ' + (txt || res.statusText);
+                        setTimeout(() => status.style.display = 'none', 4000);
+                    }
+                } catch (err) {
+                    console.error(err);
+                    status.textContent = 'Error de red al guardar.';
+                    setTimeout(() => status.style.display = 'none', 4000);
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+        })();
+    </script>
+}
