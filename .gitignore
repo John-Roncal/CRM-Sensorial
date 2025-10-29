@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Firebase configuration files
+AppWebCentralRestaurante/Firebase/*.json
