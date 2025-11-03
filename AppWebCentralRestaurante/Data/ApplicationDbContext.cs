@@ -1,5 +1,9 @@
 ﻿using AppWebCentralRestaurante.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
+using System;
+using System.Threading.Tasks;
 
 namespace AppWebCentralRestaurante.Data
 {
@@ -15,6 +19,27 @@ namespace AppWebCentralRestaurante.Data
         public DbSet<AnonSession> AnonSessions { get; set; }
         public DbSet<Perfile> Perfiles { get; set; }
         public DbSet<Evento> Eventos { get; set; }
+
+        public async Task<List<ReservaViewModel>> GetReservasDelDia()
+        {
+            var hoy = DateTime.Today;
+            return await Reservas
+                .Where(r => r.FechaHora.Date == hoy)
+                .Select(r => new ReservaViewModel
+                {
+                    Id = r.Id,
+                    Hora = r.FechaHora.TimeOfDay,
+                    CodigoReserva = "RES-" + r.Id.ToString("D3"),
+                    NumeroPersonas = r.NumComensales,
+                    Alergias = r.Restricciones,
+                    Estado = r.Estado,
+                    NombreCliente = r.Usuario != null ? r.Usuario.Nombre : r.NombreReserva,
+                    NombreExperiencia = r.Experiencia.Nombre,
+                    DescripcionExperiencia = r.Experiencia.Descripcion,
+                    PrecioExperiencia = r.Experiencia.Precio
+                })
+                .ToListAsync();
+        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
