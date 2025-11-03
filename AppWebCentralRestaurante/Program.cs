@@ -12,55 +12,52 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using AppWebCentralRestaurante.Data;
 using AppWebCentralRestaurante.Models;
-using AppWebCentralRestaurante.Services; // ICohereService, CohereChatService, RecommendationService
+using AppWebCentralRestaurante.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-var configuration = builder.Configuration;
+var config = builder.Configuration;
 var env = builder.Environment;
 
-// ----------------------
 // MVC / Razor
-// ----------------------
 builder.Services.AddControllersWithViews();
 
-// ----------------------
-// DbContext (SQL Server) - ajusta connection string en appsettings.json
-// ----------------------
-builder.Services.AddDbContext<CentralContext>(opts =>
-    opts.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+// DbContext
+builder.Services.AddDbContext<ApplicationDbContext>(opts =>
+    opts.UseSqlServer(config.GetConnectionString("DefaultConnection")));
 
-// ----------------------
-// Session (para chat draft, etc.)
-// ----------------------
+// Session
+// CORS: permitir el origen de tu frontend y credenciales
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendPolicy", policy =>
+    {
+        policy.WithOrigins("http://localhost:3000") // <- ajusta a tu frontend (o "https://tu-dominio.com")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials(); // importante para que las cookies viajen
+    });
+});
+
+// Session (ajustar SameSite si necesitas que la cookie viaje cross-site)
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
+
+    // Si frontend y backend están en diferente origen y quieres que la cookie de sesión viaje,
+    // debes usar None + Secure=true (requiere HTTPS). Si estás en desarrollo usando HTTP,
+    // deja Lax o usa same origin.
+    options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
 });
 
-// ----------------------
-// HttpClient y servicios externos
-// - Registramos ICohereService con HttpClient factory (mejor para llamadas HTTP)
-// ----------------------
-builder.Services.AddHttpClient(); // keep a generic factory available
-builder.Services.AddHttpClient<ICohereService, CohereChatService>();
-
-// ----------------------
-// RecommendationService: Scoped (para poder inyectar CentralContext si se necesita)
-// - Scoped is recommended because it can depend on CentralContext (which is scoped).
-// ----------------------
+// HttpClient and app services
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<RecommendationService>();
-
-// ----------------------
-// Password hasher (Identity helper) - usado en RegistroController
-// ----------------------
 builder.Services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
 
-// ----------------------
-// Authentication: Cookie-based
-// ----------------------
+// Authentication (cookie)
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -68,25 +65,32 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.Name = "CentralAuth";
         options.ExpireTimeSpan = TimeSpan.FromDays(7);
         options.SlidingExpiration = true;
-        // options.AccessDeniedPath = "/Auth/AccessDenied"; // si quieres
+
+        // Para escenarios cross-site (frontend distinto), hacer:
+        // options.Cookie.SameSite = SameSiteMode.None;
+        // options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // REQUIERE HTTPS
+
+        // Si estás en desarrollo en http://localhost, NO pongas SecurePolicy.Always porque el navegador rechazará la cookie.
+        // En producción, usa None + Secure = true.
+#if !DEBUG
+        options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+#else
+        // En development con http local, mantener Lax para que puedas depurar sin HTTPS.
+        options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+#endif
     });
 builder.Services.AddAuthorization();
 
-// ----------------------
-// (Opcional) Exponer wwwroot como spa-static (si usas archivos client)
-// ----------------------
+// static files
 builder.Services.AddSpaStaticFiles(cfg => cfg.RootPath = "wwwroot");
 
-// ----------------------
-// Inicializar Firebase Admin (Service Account)
-// ----------------------
-var serviceAccountPath = configuration["Firebase:ServiceAccountPath"];
+// Firebase Admin (optional)
+var serviceAccountPath = config["Firebase:ServiceAccountPath"];
 if (!string.IsNullOrWhiteSpace(serviceAccountPath))
 {
-    var resolved = Path.IsPathRooted(serviceAccountPath)
-        ? serviceAccountPath
-        : Path.Combine(env.ContentRootPath, serviceAccountPath);
-
+    var resolved = Path.IsPathRooted(serviceAccountPath) ? serviceAccountPath : Path.Combine(env.ContentRootPath, serviceAccountPath);
     if (File.Exists(resolved))
     {
         try
@@ -95,32 +99,17 @@ if (!string.IsNullOrWhiteSpace(serviceAccountPath))
             {
                 var cred = GoogleCredential.FromFile(resolved);
                 FirebaseApp.Create(new AppOptions { Credential = cred });
-                Console.WriteLine("Firebase Admin inicializado desde: " + resolved);
             }
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine("Error inicializando Firebase Admin: " + ex.Message);
+            // ignore init error here; log elsewhere if needed
         }
     }
-    else
-    {
-        Console.WriteLine("ADVERTENCIA: Firebase service account no encontrado en: " + resolved);
-    }
-}
-else
-{
-    Console.WriteLine("ADVERTENCIA: Firebase:ServiceAccountPath no configurado. Si usas Firebase Admin, configura la ruta.");
 }
 
-// ----------------------
-// Build app
-// ----------------------
 var app = builder.Build();
 
-// ----------------------
-// Pipeline
-// ----------------------
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -132,25 +121,21 @@ else
 }
 
 app.UseStaticFiles();
+if (!app.Environment.IsDevelopment()) app.UseSpaStaticFiles();
 
-if (!app.Environment.IsDevelopment())
-{
-    app.UseSpaStaticFiles();
-}
-
-// Order matters: routing -> session -> auth
 app.UseRouting();
 
-// Session must be before auth if session values are used in auth callbacks/middleware
-app.UseSession();
+app.UseCors("FrontendPolicy");
 
+
+app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Map MVC routes
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Finalize
+app.MapGet("/health", () => Results.Ok(new { status = "ok", timestamp = DateTime.UtcNow }));
+
 app.Run();

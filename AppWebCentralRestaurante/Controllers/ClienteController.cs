@@ -16,10 +16,10 @@ namespace AppWebCentralRestaurante.Controllers
     [Authorize]
     public class ClienteController : Controller
     {
-        private readonly CentralContext _context;
+        private readonly ApplicationDbContext _context;
         private readonly ILogger<ClienteController> _logger;
 
-        public ClienteController(CentralContext context, ILogger<ClienteController> logger)
+        public ClienteController(ApplicationDbContext context, ILogger<ClienteController> logger)
         {
             _context = context;
             _logger = logger;

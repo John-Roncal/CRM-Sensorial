@@ -23,11 +23,11 @@ namespace AppWebCentralRestaurante.Controllers
 
     public class AuthController : Controller
     {
-        private readonly CentralContext _context;
+        private readonly ApplicationDbContext _context;
         private readonly IPasswordHasher<Usuario> _passwordHasher;
         private readonly ILogger<AuthController> _logger;
 
-        public AuthController(CentralContext context, IPasswordHasher<Usuario> passwordHasher, ILogger<AuthController> logger)
+        public AuthController(ApplicationDbContext context, IPasswordHasher<Usuario> passwordHasher, ILogger<AuthController> logger)
         {
             _context = context;
             _passwordHasher = passwordHasher;

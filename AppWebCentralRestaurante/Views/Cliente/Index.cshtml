@@ -58,7 +58,7 @@
                         @Html.Raw(System.Net.WebUtility.HtmlEncode(Model.PreferenciaJsonPretty ?? Model.Preferencia.DatosJson))
                     </div>
                     <div style="margin-top:8px;color:#666;font-size:0.9rem;">
-                        Última actualización: @((Model.Preferencia.ActualizadoEn ?? Model.Preferencia.CreadoEn).ToString("g"))
+                        Última actualización: @((Model.Preferencia.CreadoEn).ToString("g"))
                     </div>
                 }
             </div>

@@ -1,83 +1,270 @@
-﻿@using System.Text.Json
-@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+﻿@using AppWebCentralRestaurante.Models
+@model List<Experiencia>
+@using System.Security.Claims
 @{
     Layout = "_Layout";
-    var initial = ViewData["InitialBot"] as string ?? "Hola, ¿en qué puedo ayudarte?";
-    var draftObj = ViewData["Draft"];
-    // serializar con opciones para que JSON sea legible por JS; si draftObj es null, pasar objeto vacío
-    var initialDraftJson = JsonSerializer.Serialize(draftObj ?? new { }, new JsonSerializerOptions { PropertyNamingPolicy = null });
-
-    // Aquí usamos ViewContext.HttpContext para evitar ambigüedades con el tipo HttpContext
-    var antiTokens = Antiforgery.GetAndStoreTokens(ViewContext.HttpContext);
-    var requestToken = antiTokens?.RequestToken ?? "";
+    // obtenemos claim de forma segura en servidor
+    var idClaim = User?.FindFirst(ClaimTypes.NameIdentifier) ?? User?.FindFirst("sub") ?? User?.FindFirst("id");
+    var jsUserId = idClaim != null ? idClaim.Value : null;
+    // Ajusta la URL del chat al host/puerto donde corre FastAPI:
+    var chatApiUrl = "http://localhost:8000/chat"; // <-- Cambia si tu FastAPI está en otra URL
 }
 
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>@ViewData["Title"]</title>
+<style>
+    :root {
+        --modal-bg: #e9e8e8;
+        --header-bg: #352827;
+        --bubble-assistant: #2f1f1f;
+        --bubble-user: #e6d7d7;
+    }
 
-    <!-- Anti-forgery token (chat.js lo leerá desde meta[name="csrf-token"]) -->
-    <meta name="csrf-token" content="@requestToken" />
+    /* fondo */
+    body {
+        background-image: url('@Url.Content("~/images/fondoLoginRegistro.jpg")');
+        background-size: cover;
+        background-position: center center;
+        min-height: 100vh;
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
 
-    <!-- Chat CSS -->
-    <link rel="stylesheet" href="~/css/chat.css" asp-append-version="true" />
-</head>
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.36);
+            z-index: 0;
+            pointer-events: none;
+        }
 
+    /* ventana de chat (modal centrado) */
+    .chat-modal {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: min(88vw, 920px);
+        max-width: 920px;
+        height: 520px;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        border-radius: 4px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+        background: var(--modal-bg);
+        border: 1px solid rgba(0,0,0,0.12);
+    }
 
+    .chat-header {
+        background: var(--header-bg);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 12px 18px;
+        height: 56px;
+        box-sizing: border-box;
+    }
 
+        .chat-header .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex: 0 0 36px;
+        }
 
+            .chat-header .avatar img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+            }
 
-<body>
-    <main class="container" style="padding:18px; max-width:1100px; margin:0 auto;">
-        <h1>@ViewData["Title"]</h1>
+        .chat-header .title {
+            font-weight: 600;
+            font-size: 1rem;
+            letter-spacing: 0.2px;
+        }
 
-        <div class="layout" role="application" aria-labelledby="chat-heading">
-            <!-- Chat column -->
-            <section class="chat-column panel" aria-label="Chat principal">
-                <div id="chatWindow" class="chat-window" aria-live="polite" role="log">
-                    <div class="msg bot">
-                        <div class="meta">Bot • ahora</div>
-                        <div class="body" id="initialBotText">@Html.Raw(System.Text.Encodings.Web.HtmlEncoder.Default.Encode(initial).Replace("\n", "<br/>"))</div>
-                    </div>
-                </div>
+    .chat-body {
+        padding: 20px 22px;
+        flex: 1 1 auto;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        background: transparent;
+    }
 
-                <form id="chatForm" autocomplete="off" class="panel" onsubmit="return false;">
-                    <input id="pregunta" name="pregunta" class="text-input" type="text" placeholder="Escribe tu mensaje..." aria-label="Escribe tu mensaje" />
-                    <button id="sendBtn" class="btn" type="submit">Enviar</button>
-                </form>
-            </section>
+    .message-row {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+    }
 
-            <!-- Side column: draft -->
-            <aside class="side-column panel draft-panel" aria-label="Estado de la reserva">
-                <h4 id="draft-title">Estado de la reserva</h4>
-                <div id="draftStatus" class="p-2">
-                    <div class="small text-muted">Aquí verás el progreso: experiencia, personas, restricciones, día y hora.</div>
-                </div>
+    .msg-assistant {
+        justify-content: flex-start;
+    }
 
-                <hr />
+        .msg-assistant .avatar-mini {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex: 0 0 36px;
+            display: inline-block;
+        }
 
-                <div>
-                    <div class="small text-muted">Consejos</div>
-                    <ul class="small">
-                        <li>Responde con claridad el número de personas.</li>
-                        <li>Indica restricciones alimentarias si las tienes.</li>
-                        <li>Puedes preguntar por disponibilidades o sugerencias de plato.</li>
-                    </ul>
-                </div>
-            </aside>
+    .assistant-bubble {
+        max-width: 64%;
+        background: var(--bubble-assistant);
+        color: #fff;
+        padding: 16px 22px;
+        border-radius: 28px;
+        border-top-left-radius: 6px;
+        box-shadow: 0 6px 14px rgba(0,0,0,0.22);
+        word-break: break-word;
+        font-size: 0.98rem;
+    }
+
+    .msg-user {
+        justify-content: flex-end;
+    }
+
+    .user-bubble {
+        max-width: 64%;
+        background: var(--bubble-user);
+        color: #2b2b2b;
+        padding: 14px 22px;
+        border-radius: 28px;
+        border-top-right-radius: 6px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+        font-size: 0.98rem;
+        margin-right: 8px;
+    }
+
+    .avatar-mini-right {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        overflow: hidden;
+        flex: 0 0 36px;
+        display: inline-block;
+    }
+
+    .chat-footer {
+        padding: 14px 18px;
+        background: transparent;
+        border-top: 1px solid rgba(0,0,0,0.06);
+    }
+
+    .chat-input-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .chat-input {
+        flex: 1 1 auto;
+        height: 46px;
+        border-radius: 10px;
+        border: 1px solid rgba(0,0,0,0.12);
+        padding: 10px 16px;
+        font-size: 1rem;
+        outline: none;
+        background: rgba(255,255,255,0.96);
+    }
+
+        .chat-input:focus {
+            box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+            border-color: rgba(0,0,0,0.18);
+        }
+
+    .send-btn {
+        width: 46px;
+        height: 46px;
+        display: inline-grid;
+        place-items: center;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        background: transparent;
+        color: #222;
+        transition: transform .08s ease, background .08s ease;
+        flex: 0 0 46px;
+        border: 1px solid rgba(0,0,0,0.12);
+    }
+
+        .send-btn:hover {
+            transform: translateY(-2px);
+            background: rgba(0,0,0,0.03);
+        }
+
+    .chat-body::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    .chat-body::-webkit-scrollbar-thumb {
+        background: rgba(0,0,0,0.12);
+        border-radius: 10px;
+    }
+
+    .chat-body::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    @@media (max-width:640px) {
+        .chat-modal
+
+    {
+        width: 96vw;
+        height: 82vh;
+    }
+
+    .assistant-bubble, .user-bubble {
+        max-width: 82%;
+    }
+
+    }
+</style>
+
+<div class="chat-modal" role="dialog" aria-label="Asistente de reservas">
+    <div class="chat-header" role="banner">
+        <div class="avatar" aria-hidden="true">
+            <img src="~/images/icoChatBot.jpg" alt="Amigo Central" />
         </div>
+        <div class="title">Amigo Central</div>
+    </div>
 
-        <!-- contenedor para el modal resumen (usado por chat.js) -->
-        <div id="resumenContainer"></div>
-    </main>
+    <!-- chatWindow vacío: tu chat.js se encargará de cargar/mostrar mensajes -->
+    <div class="chat-body" id="chatWindow" aria-live="polite" aria-atomic="false"></div>
 
-    <!-- Si quieres que la página cargue un draft inicial (de ViewData["Draft"]), el script JSON lo lee chat.js -->
-    <script id="initialDraftJson" type="application/json">@Html.Raw(initialDraftJson)</script>
+    <div class="chat-footer">
+        <form id="chatForm" class="chat-input-wrapper" role="form" onsubmit="return false;">
+            <input id="chatInput" aria-label="Escribe un mensaje" class="chat-input" placeholder="Escribe un mensaje" autocomplete="off" />
+            <button id="btnSend" class="send-btn" type="button" title="Enviar" aria-label="Enviar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M22 2L11 13"></path>
+                    <path d="M22 2L15 22L11 13L2 9L22 2Z"></path>
+                </svg>
+            </button>
+        </form>
+    </div>
+</div>
 
-    <!-- Chat script (asegúrate de que este archivo sea el que te pasé actualizado) -->
-    <script src="~/js/chat.js" asp-append-version="true"></script>
-</body>
-</html>
+<!-- placeholder para resumen de reserva (si tu lógica lo utiliza) -->
+<div id="reservationSummaryContainer" class="d-none"></div>
+
+<script>
+    // variables globales que usa tu chat.js
+    window.__CHAT_API = window.__CHAT_API || @Html.Raw(System.Text.Json.JsonSerializer.Serialize("http://localhost:8000/chat"));
+    window.__RESERVAS_API = window.__RESERVAS_API || @Html.Raw(System.Text.Json.JsonSerializer.Serialize("/api/reservas"));
+    window.__USER_ID = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(jsUserId));
+    window.__AUTH_TOKEN = null;
+</script>
+
+<!-- carga tu script original: chat.js hará la comunicación y renderizado -->
+<script src="~/js/chat.js"></script>

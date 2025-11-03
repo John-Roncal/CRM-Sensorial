@@ -113,39 +113,42 @@
 
     async function enviarTokenAlServidor(idToken, nombre, password, confirmPassword) {
         try {
-            const payload = {
-                IdToken: idToken,
-                Nombre: nombre || '',
-                Password: password || '',
-                ConfirmPassword: confirmPassword || ''
-            };
-
-            console.log("[verify] enviar payload:", payload);
-
+            const payload = { IdToken: idToken, Nombre: nombre || '', Password: password || '', ConfirmPassword: confirmPassword || '' };
             const res = await fetch('/Registro/Finalizar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
+            const contentType = res.headers.get('content-type') || '';
+            let body;
+            if (contentType.includes('application/json')) {
+                body = await res.json();
+            } else {
+                body = await res.text();
+            }
+
             if (!res.ok) {
-                const text = await res.text();
-                console.error("[verify] Finalizar response error:", res.status, text);
-                alert('Error finalizando el registro: ' + (text || res.statusText));
+                console.error("[verify] Finalizar response error:", res.status, body);
+                // Si viene JSON con { error, detail } mostrarlos
+                if (typeof body === 'object' && body.error) {
+                    alert('Error finalizando el registro: ' + body.error + (body.detail ? '\nDetalle: ' + body.detail : ''));
+                } else {
+                    alert('Error finalizando el registro: ' + (body || res.statusText));
+                }
                 return;
             }
 
-            // limpieza
+            // OK
             localStorage.removeItem('emailForSignIn');
             localStorage.removeItem('tmpNombre');
-
-            // redirect
             window.location.href = '/Cliente';
         } catch (err) {
             console.error("[verify] enviarTokenAlServidor error:", err);
             alert('Error comunicando con el servidor.');
         }
     }
+
 
     function showMessage(text, isError = false) {
         const el = document.getElementById('mensaje');

@@ -29,9 +29,9 @@ namespace AppWebCentralRestaurante.Services
         private ITransformer? _model;
         private DataViewSchema? _modelSchema;
         private readonly ILogger<RecommendationService> _logger;
-        private readonly CentralContext? _db; // opcional, para entrenar desde BD
+        private readonly ApplicationDbContext? _db; // opcional, para entrenar desde BD
 
-        public RecommendationService(ILogger<RecommendationService> logger, CentralContext? db = null)
+        public RecommendationService(ILogger<RecommendationService> logger, ApplicationDbContext? db = null)
         {
             _ml = new MLContext(seed: 0);
             _logger = logger;

@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace AppWebCentralRestaurante.Migrations
 {
-    [DbContext(typeof(CentralContext))]
+    [DbContext(typeof(ApplicationDbContext))]
     partial class CentralContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)

@@ -3,11 +3,10 @@
 }
 
 /*
-  Esta vista carga verify.js que:
-   - detecta si la URL es un sign-in link de Firebase,
-   - completa signInWithEmailLink,
-   - muestra el panel para crear contraseña (#panelCrearPassword),
-   - envía idToken al endpoint POST /Registro/Finalizar.
+  VerificarEmail.cshtml
+  - NO pide Nombre; solo solicita crear contraseña (igual al ejemplo que mencionaste que funciona).
+  - Usa los mismos IDs que tu verify.js: #mensaje, #loading, #panelCrearPassword, #formCrearPassword, #Password, #ConfirmPassword, #nota
+  - Incluye los scripts de Firebase y tus js al final (asegúrate que ~/js/firebase-config.js y ~/js/verify.js existan y estén correctos).
 */
 
 <h1>Verificación de correo</h1>
