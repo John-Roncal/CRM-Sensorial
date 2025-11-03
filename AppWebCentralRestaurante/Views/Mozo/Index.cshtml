@@ -1,0 +1,66 @@
+@model AppWebCentralRestaurante.Models.MozoViewModel
+@{
+    ViewData["Title"] = "Vista del Mozo";
+}
+
+<div class="container">
+    <h1 class="my-4">Reservas del Día</h1>
+    <table class="table table-striped table-hover">
+        <thead class="thead-dark">
+            <tr>
+                <th>Hora</th>
+                <th>Código Reserva</th>
+                <th>N° Personas</th>
+                <th>Alergias</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var reserva in Model.Reservas)
+            {
+                <tr>
+                    <td>@reserva.Hora.ToString("hh\\:mm")</td>
+                    <td>@reserva.CodigoReserva</td>
+                    <td>@reserva.NumeroPersonas</td>
+                    <td>@reserva.Alergias</td>
+                    <td>
+                        <span class="badge @(reserva.Estado == "confirmada" ? "bg-success" : (reserva.Estado == "pendiente" ? "bg-warning text-dark" : "bg-danger"))">
+                            @reserva.Estado
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#detalleModal-@reserva.Id">
+                            Ver Detalle
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@foreach (var reserva in Model.Reservas)
+{
+    <!-- Modal -->
+    <div class="modal fade" id="detalleModal-@reserva.Id" tabindex="-1" aria-labelledby="detalleModalLabel-@reserva.Id" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="detalleModalLabel-@reserva.Id">Detalle del Pedido - @reserva.CodigoReserva</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <h5>Cliente: @reserva.NombreCliente</h5>
+            <hr />
+            <h5>Experiencia: @reserva.NombreExperiencia</h5>
+            <p>@reserva.DescripcionExperiencia</p>
+            <p><strong>Precio:</strong> @reserva.PrecioExperiencia.ToString("C")</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+}

@@ -173,6 +173,14 @@
                                         </a>
                                     </li>
                                 }
+                                @if (User.IsInRole("Mozo"))
+                                {
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Mozo" asp-action="Index">
+                                            <i class="bi bi-card-checklist me-2"></i> Vista Mozo
+                                        </a>
+                                    </li>
+                                }
 
                                 <li>
                                     <a class="dropdown-item" asp-controller="Cliente" asp-action="Index">
