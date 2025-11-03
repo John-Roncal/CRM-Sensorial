@@ -98,7 +98,7 @@ ADD Precio DECIMAL(10,2) NULL;
 
 
 
-select * from dbo.Reservas
+select * from dbo.Usuarios
 
 
 

@@ -1,0 +1,77 @@
+﻿@* parámetro: dynamic model con reserva_id, experienciaNombre, fechaHora, numComensales, restricciones, nombreReserva *@
+@model dynamic
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">Resumen de la reserva</h5>
+        <p><strong>Reserva para:</strong> @Model?.nombreReserva</p>
+        <p><strong>Experiencia:</strong> @Model?.experienciaNombre</p>
+        <p><strong>Fecha y hora:</strong> @Model?.fechaHora</p>
+        <p><strong>Comensales:</strong> @Model?.numComensales</p>
+        <p><strong>Restricciones:</strong> @(string.IsNullOrWhiteSpace((string)Model?.restricciones) ? "Ninguna" : Model?.restricciones)</p>
+
+        <div class="d-flex gap-2 mt-3">
+            <button id="btnConfirm" class="btn btn-success">Confirmar reserva</button>
+            @if (User?.Identity?.IsAuthenticated == true)
+            {
+                <button id="btnSavePref" class="btn btn-outline-primary">Confirmar y guardar preferencias</button>
+            }
+            else
+            {
+                <button id="btnSavePref" class="btn btn-outline-primary">Guardar preferencias y registrarme</button>
+            }
+            <button id="btnEdit" class="btn btn-secondary">Editar</button>
+            <button id="btnCancel" class="btn btn-danger">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const reservaId = @Model?.reservaId ?? null;
+
+        document.getElementById('btnConfirm').addEventListener('click', async () => {
+            try {
+                const resp = await fetch('/api/reservas/confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reservaId: reservaId, accion: 'confirmar', guardarPreferencias: false })
+                });
+                const json = await resp.json();
+                if (resp.ok) alert('Reserva confirmada');
+                else alert('Error: ' + JSON.stringify(json));
+            } catch (err) { console.error(err); alert('Error confirmando reserva'); }
+        });
+
+        document.getElementById('btnSavePref').addEventListener('click', () => {
+            if (@(User?.Identity?.IsAuthenticated == true ? "true" : "false")) {
+                // usuario logueado: confirmar + guardar preferencias en backend
+                fetch('/api/reservas/confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reservaId: reservaId, accion: 'confirmar', guardarPreferencias: true })
+                }).then(r => r.json()).then(j => { if (j?.reserva_id) alert('Confirmada y preferencias guardadas'); else alert('Error'); });
+            } else {
+                // redirigir a registro (puedes pasar ?next=/chat/resumen?reservaId=...)
+                window.location.href = '/Registro?preserve_reserva=' + reservaId;
+            }
+        });
+
+        document.getElementById('btnEdit').addEventListener('click', () => {
+            // lógica para editar: vuelve al chat o abre formulario
+            window.location.href = '/Chat'; // ajustar según tu ruta de chat
+        });
+
+        document.getElementById('btnCancel').addEventListener('click', async () => {
+            try {
+                const resp = await fetch('/api/reservas/confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reservaId: reservaId, accion: 'cancelar' })
+                });
+                if (resp.ok) alert('Reserva cancelada');
+                else alert('Error cancelando');
+            } catch (err) { console.error(err); alert('Error cancelando reserva'); }
+        });
+    </script>
+}

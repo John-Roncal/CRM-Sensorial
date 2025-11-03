@@ -3,45 +3,359 @@
     Layout = "_Layout";
 }
 
-<h2>@ViewData["Title"]</h2>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
 
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card mt-3 shadow-sm">
-            <div class="card-body">
+<style>
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
 
-                <div asp-validation-summary="All" class="alert alert-danger d-none" role="alert" id="validationSummary"></div>
+    .login-hero {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        color: #fff;
+        background-image: url('@Url.Content("~/images/fondoLoginRegistro.jpg")');
+        background-size: cover;
+        background-position: center center;
+        background-repeat: no-repeat;
+        background-attachment: scroll;
+        z-index: 0;
+    }
 
-                <form asp-action="Login" method="post" novalidate>
-                    @Html.AntiForgeryToken()
+        .login-hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.58);
+            z-index: 0;
+            pointer-events: none;
+            backdrop-filter: blur(2px);
+        }
 
-                    @* hidden ReturnUrl: obligatorio tenerlo para evitar el error *@
-                    <input asp-for="ReturnUrl" type="hidden" value="@Model?.ReturnUrl ?? " "  />
+    .login-container {
+        position: relative;
+        z-index: 2;
+        width: 100%;
+        max-width: 760px;
+        padding: 2rem 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        box-sizing: border-box;
+    }
 
-                    <div class="mb-3">
-                        <label asp-for="Email" class="form-label">Correo electrónico</label>
-                        <input asp-for="Email" class="form-control" />
-                        <span asp-validation-for="Email" class="text-danger small"></span>
+    .login-title {
+        font-family: 'Cinzel', serif;
+        font-size: 3.2rem;
+        margin: 0 0 0.5rem 0;
+        letter-spacing: 1px;
+        text-align: center;
+        color: #fff;
+        text-shadow: 0 4px 12px rgba(0,0,0,0.65);
+    }
+
+    .login-card {
+        width: 100%;
+        background: transparent;
+        border: none;
+        padding-top: 1rem;
+        display: flex;
+        justify-content: center;
+    }
+
+    .login-form {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    /* ---------- INPUT LINES / FLOATING LABEL ---------- */
+    .input-line {
+        position: relative;
+        width: 80%;
+        max-width: 520px;
+        box-sizing: border-box;
+        padding-top: 0.35rem;
+    }
+
+        .input-line .control {
+            position: relative;
+            display: block;
+        }
+
+        .input-line input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(255,255,255,0.45);
+            padding: 0.95rem 1.2rem 0.6rem 3rem;
+            color: rgba(255,255,255,0.98);
+            font-size: 1.05rem;
+            outline: none;
+            transition: border-color .18s ease, color .12s ease, box-shadow .12s ease;
+        }
+
+        .input-line label.floating-label {
+            position: absolute;
+            left: 3rem;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: rgba(255,255,255,0.75);
+            transition: all .16s ease;
+            font-size: 1.02rem;
+        }
+
+        .input-line .field-meta {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.65);
+        }
+
+    .input-icon {
+        position: absolute;
+        left: 0.6rem;
+        top: 50%;
+        transform: translateY(-50%);
+        opacity: 0.95;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .input-line::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 2px;
+        background: linear-gradient(90deg, rgba(255,255,255,0.95), rgba(255,255,255,0.6));
+        transform: scaleX(0);
+        transform-origin: left center;
+        transition: transform .22s cubic-bezier(.2,.9,.2,1), opacity .18s;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .input-line.focused::after,
+    .input-line.has-value::after {
+        transform: scaleX(1);
+        opacity: 1;
+    }
+
+    .input-line.focused label.floating-label,
+    .input-line.has-value label.floating-label {
+        top: -0.6rem;
+        left: 2.6rem;
+        font-size: 0.78rem;
+        color: rgba(255,255,255,0.95);
+        text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+
+    .input-line.focused input {
+        color: #ffffff;
+    }
+
+    .input-line.has-error input {
+        border-bottom-color: rgba(255,80,80,0.95);
+    }
+
+    .input-line.has-error::after {
+        background: linear-gradient(90deg, rgba(255,80,80,0.95), rgba(255,120,120,0.8));
+        transform: scaleX(1);
+        opacity: 1;
+    }
+
+    .validation-msg {
+        display: block;
+        margin-top: 6px;
+        font-size: 0.85rem;
+        color: #ffb3b3;
+    }
+
+    .btn-outline-custom {
+        width: 80%;
+        max-width: 520px;
+        background: rgba(0,0,0,0.12);
+        color: #fff;
+        border: 1px solid rgba(255,255,255,0.7);
+        padding: 0.9rem 1.25rem;
+        border-radius: 10px;
+        font-size: 1.05rem;
+        text-align: center;
+        cursor: pointer;
+        transition: background .12s, transform .08s;
+    }
+
+        .btn-outline-custom:hover {
+            background: rgba(255,255,255,0.04);
+            transform: translateY(-1px);
+        }
+
+    .toggle-password {
+        position: absolute;
+        right: 0.6rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: transparent;
+        border: none;
+        color: rgba(255,255,255,0.9);
+        cursor: pointer;
+        padding: 0.2rem;
+    }
+
+    .small-link {
+        color: rgba(255,255,255,0.9);
+        text-decoration: underline;
+        font-size: 0.95rem;
+    }
+
+    .footer-note {
+        margin-top: 0.6rem;
+        color: rgba(255,255,255,0.85);
+        font-size: 0.95rem;
+        text-align: center;
+    }
+
+    /* ---------- AUTOFILL OVERRIDES ---------- */
+    /* Chrome/Edge/Safari */
+    input:-webkit-autofill,
+    textarea:-webkit-autofill,
+    select:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus {
+        -webkit-text-fill-color: #ffffff !important;
+        -webkit-box-shadow: 0 0 0px 1000px rgba(0,0,0,0) inset !important;
+        box-shadow: 0 0 0px 1000px rgba(0,0,0,0) inset !important;
+        background-color: transparent !important;
+        transition: background-color 5000s ease-in-out 0s !important;
+    }
+
+    /* Firefox */
+    input:-moz-autofill {
+        box-shadow: 0 0 0px 1000px rgba(0,0,0,0) inset !important;
+        -moz-text-fill-color: #ffffff !important;
+    }
+
+    /* small animation name to detect autofill via animationstart event */
+    input:-webkit-autofill {
+        animation-name: onAutoFillStart;
+        animation-duration: 0.01s;
+    }
+    @@keyframes onAutoFillStart {
+        from
+
+    {
+    }
+
+    to {
+    }
+
+    }
+
+    input::placeholder {
+        color: rgba(255,255,255,0.75);
+        opacity: 1;
+    }
+
+    @@media (max-width: 576px) {
+        .login-title
+
+    {
+        font-size: 2.0rem;
+    }
+
+    .input-line {
+        width: 90%;
+    }
+
+    .btn-outline-custom {
+        width: 90%;
+    }
+
+    .input-line label.floating-label {
+        left: 2.8rem;
+    }
+
+    }
+</style>
+
+<div class="login-hero" role="main" aria-label="Iniciar sesión fondo">
+    <div class="login-container">
+        <h1 class="login-title">Iniciar Sesión</h1>
+
+        <div class="login-card">
+            <div asp-validation-summary="All" class="alert alert-danger d-none" role="alert" id="validationSummary"></div>
+
+            <form asp-action="Login" method="post" novalidate class="login-form" autocomplete="on">
+                @Html.AntiForgeryToken()
+                <input asp-for="ReturnUrl" type="hidden" value="@(Model?.ReturnUrl ?? string.Empty)" />
+
+                <!-- EMAIL -->
+                <div class="input-line @(ViewData.ModelState[nameof(Model.Email)]?.Errors.Count > 0 ? "has-error" : "")" data-field="Email">
+                    <div class="control">
+                        <span class="input-icon" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="white" stroke-opacity="0.9" stroke-width="1.4" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 8.5l8.5 5.5L20 8.5M3 6.5h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-11z" />
+                            </svg>
+                        </span>
+
+                        <input asp-for="Email" id="Email" type="email" aria-label="Email" autocomplete="username" />
+                        <label class="floating-label" for="Email">email</label>
+                        <span class="field-meta" aria-hidden="true"></span>
+                        <span asp-validation-for="Email" class="validation-msg"></span>
                     </div>
+                </div>
 
-                    <div class="mb-3">
-                        <label asp-for="Password" class="form-label">Contraseña</label>
-                        <input asp-for="Password" class="form-control" />
-                        <span asp-validation-for="Password" class="text-danger small"></span>
+                <!-- PASSWORD -->
+                <div class="input-line @(ViewData.ModelState[nameof(Model.Password)]?.Errors.Count > 0 ? "has-error" : "")" data-field="Password">
+                    <div class="control">
+                        <span class="input-icon" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="white" stroke-opacity="0.9" stroke-width="1.4" aria-hidden="true">
+                                <rect x="3" y="11" width="18" height="10" rx="2" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 11V8a5 5 0 0 1 10 0v3" />
+                            </svg>
+                        </span>
+
+                        <input asp-for="Password" id="Password" type="password" aria-label="Password" autocomplete="current-password" />
+                        <label class="floating-label" for="Password">password</label>
+
+                        <button type="button" class="toggle-password" aria-label="Mostrar contraseña" title="Mostrar contraseña" tabindex="-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+
+                        <span asp-validation-for="Password" class="validation-msg"></span>
                     </div>
+                </div>
 
-                    <div class="form-check mb-3">
-                        <input asp-for="RememberMe" class="form-check-input" />
-                        <label asp-for="RememberMe" class="form-check-label">Mantener sesión</label>
-                    </div>
+                <button type="submit" class="btn-outline-custom" aria-label="Iniciar sesión">Iniciar Sesión</button>
 
-                    <div class="d-flex justify-content-between align-items-center">
-                        <a class="btn btn-link p-0" href="/Registro">¿No tienes cuenta? Regístrate</a>
-                        <button type="submit" class="btn btn-primary">Iniciar sesión</button>
-                    </div>
-                </form>
+                <div style="width:80%; max-width:520px; display:flex; justify-content:center; margin-top:0.6rem;">
+                    <a class="small-link" href="/Account/ForgotPassword">¿Olvidaste tu contraseña?</a>
+                </div>
 
-            </div>
+                <div class="footer-note">
+                    ¿Aún no tienes una cuenta? <a href="/Registro" class="small-link">Regístrate</a>
+                </div>
+
+            </form>
         </div>
     </div>
 </div>
@@ -50,6 +364,82 @@
     <partial name="_ValidationScriptsPartial" />
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const inputLines = document.querySelectorAll('.input-line');
+
+            function applyValueState() {
+                inputLines.forEach(line => {
+                    const input = line.querySelector('input');
+                    if (!input) return;
+                    if (input.value && input.value.trim().length > 0) {
+                        line.classList.add('has-value');
+                    } else {
+                        if (!line.classList.contains('focused')) line.classList.remove('has-value');
+                    }
+                });
+            }
+
+            inputLines.forEach(line => {
+                const input = line.querySelector('input');
+                const toggle = line.querySelector('.toggle-password');
+
+                if (!input) return;
+
+                // estado inicial (cuando el servidor rellena campos o el navegador autocompleta antes)
+                if (input.value && input.value.trim().length > 0) {
+                    line.classList.add('has-value');
+                }
+
+                // focus / blur para animaciones
+                input.addEventListener('focus', () => line.classList.add('focused'));
+                input.addEventListener('blur', () => {
+                    line.classList.remove('focused');
+                    if (input.value && input.value.trim().length > 0) line.classList.add('has-value');
+                    else line.classList.remove('has-value');
+                });
+
+                // input / change / paste (cubre acciones del usuario)
+                input.addEventListener('input', () => {
+                    if (input.value && input.value.trim().length > 0) line.classList.add('has-value');
+                    else line.classList.remove('has-value');
+                });
+                input.addEventListener('change', applyValueState);
+                input.addEventListener('paste', () => setTimeout(applyValueState, 10));
+
+                // toggle password visibility
+                if (toggle) {
+                    toggle.addEventListener('click', () => {
+                        if (input.type === 'password') {
+                            input.type = 'text';
+                            toggle.setAttribute('aria-label', 'Ocultar contraseña');
+                            toggle.title = 'Ocultar contraseña';
+                        } else {
+                            input.type = 'password';
+                            toggle.setAttribute('aria-label', 'Mostrar contraseña');
+                            toggle.title = 'Mostrar contraseña';
+                        }
+                    });
+                }
+            });
+
+            // Detectar autofill en navegadores que disparan animationstart
+            document.addEventListener('animationstart', function (e) {
+                if (e.animationName === 'onAutoFillStart') {
+                    const target = e.target;
+                    const line = target.closest('.input-line');
+                    if (line) {
+                        // pequeño retraso para que el valor ya esté aplicado
+                        setTimeout(() => line.classList.add('has-value'), 10);
+                    }
+                }
+            }, true);
+
+            // Pasadas con delay para capturar el autofill que ocurre después de cargar
+            setTimeout(applyValueState, 50);
+            setTimeout(applyValueState, 250);
+            setTimeout(applyValueState, 800);
+            setTimeout(applyValueState, 1500);
+
+            // Mostrar validationSummary si llega con contenido desde servidor
             const summary = document.getElementById('validationSummary');
             if (summary && summary.textContent.trim().length > 0) summary.classList.remove('d-none');
         });

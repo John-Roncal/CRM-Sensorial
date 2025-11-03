@@ -3,52 +3,424 @@
     Layout = "_Layout";
 }
 
-<h1>Registrarme</h1>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
 
-<div class="row">
-    <div class="col-md-6">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <p class="text-muted">
-                    Ingresa tu nombre y correo. Recibirás un enlace por correo para continuar el registro.
-                </p>
+<style>
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
 
-                <!-- Form manejado por wwwroot/js/registro.js -->
-                <form id="formRegistro" autocomplete="off">
-                    <div class="mb-3">
-                        <label for="Nombre" class="form-label">Nombre</label>
-                        <input id="Nombre" name="Nombre" class="form-control" maxlength="150" required />
+    /* Fondo a pantalla completa (usa la misma imagen que el login) */
+    .login-hero {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        color: #fff;
+        background-image: url('@Url.Content("~/images/fondoLoginRegistro.jpg")');
+        background-size: cover;
+        background-position: center center;
+        background-repeat: no-repeat;
+        background-attachment: scroll;
+        z-index: 0;
+    }
+
+        .login-hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.58);
+            z-index: 0;
+            pointer-events: none;
+            backdrop-filter: blur(2px);
+        }
+
+    .login-container {
+        position: relative;
+        z-index: 2;
+        width: 100%;
+        max-width: 760px;
+        padding: 2rem 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        box-sizing: border-box;
+    }
+
+    .login-title {
+        font-family: 'Cinzel', serif;
+        font-size: 3.2rem;
+        margin: 0 0 0.5rem 0;
+        letter-spacing: 1px;
+        text-align: center;
+        color: #fff;
+        text-shadow: 0 4px 12px rgba(0,0,0,0.65);
+    }
+
+    .login-card {
+        width: 100%;
+        background: transparent;
+        border: none;
+        padding-top: 1rem;
+        display: flex;
+        justify-content: center;
+    }
+
+    .login-form {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    /* ---------- INPUT LINES / FLOATING LABEL ---------- */
+    .input-line {
+        position: relative;
+        width: 80%;
+        max-width: 520px;
+        box-sizing: border-box;
+        padding-top: 0.35rem;
+    }
+
+        .input-line .control {
+            position: relative;
+            display: block;
+        }
+
+        .input-line input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(255,255,255,0.45);
+            padding: 0.95rem 1.2rem 0.6rem 3rem;
+            color: rgba(255,255,255,0.98);
+            font-size: 1.05rem;
+            outline: none;
+            transition: border-color .18s ease, color .12s ease, box-shadow .12s ease;
+        }
+
+        .input-line label.floating-label {
+            position: absolute;
+            left: 3rem;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: rgba(255,255,255,0.75);
+            transition: all .16s ease;
+            font-size: 1.02rem;
+        }
+
+        .input-line .field-meta {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.65);
+        }
+
+    .input-icon {
+        position: absolute;
+        left: 0.6rem;
+        top: 50%;
+        transform: translateY(-50%);
+        opacity: 0.95;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .input-line::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 2px;
+        background: linear-gradient(90deg, rgba(255,255,255,0.95), rgba(255,255,255,0.6));
+        transform: scaleX(0);
+        transform-origin: left center;
+        transition: transform .22s cubic-bezier(.2,.9,.2,1), opacity .18s;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .input-line.focused::after,
+    .input-line.has-value::after {
+        transform: scaleX(1);
+        opacity: 1;
+    }
+
+    .input-line.focused label.floating-label,
+    .input-line.has-value label.floating-label {
+        top: -0.6rem;
+        left: 2.6rem;
+        font-size: 0.78rem;
+        color: rgba(255,255,255,0.95);
+        text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+
+    .input-line.focused input {
+        color: #ffffff;
+    }
+
+    .input-line.has-error input {
+        border-bottom-color: rgba(255,80,80,0.95);
+    }
+
+    .input-line.has-error::after {
+        background: linear-gradient(90deg, rgba(255,80,80,0.95), rgba(255,120,120,0.8));
+        transform: scaleX(1);
+        opacity: 1;
+    }
+
+    .validation-msg {
+        display: block;
+        margin-top: 6px;
+        font-size: 0.85rem;
+        color: #ffb3b3;
+    }
+
+    .btn-outline-custom {
+        width: 80%;
+        max-width: 520px;
+        background: rgba(0,0,0,0.12);
+        color: #fff;
+        border: 1px solid rgba(255,255,255,0.7);
+        padding: 0.9rem 1.25rem;
+        border-radius: 10px;
+        font-size: 1.05rem;
+        text-align: center;
+        cursor: pointer;
+        transition: background .12s, transform .08s;
+    }
+
+        .btn-outline-custom:hover {
+            background: rgba(255,255,255,0.04);
+            transform: translateY(-1px);
+        }
+
+    .small-link {
+        color: rgba(255,255,255,0.9);
+        text-decoration: underline;
+        font-size: 0.95rem;
+    }
+
+    .footer-note {
+        margin-top: 0.6rem;
+        color: rgba(255,255,255,0.85);
+        font-size: 0.95rem;
+        text-align: center;
+    }
+
+    /* ---------- AUTOFILL OVERRIDES ---------- */
+    input:-webkit-autofill,
+    textarea:-webkit-autofill,
+    select:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus {
+        -webkit-text-fill-color: #ffffff !important;
+        -webkit-box-shadow: 0 0 0px 1000px rgba(0,0,0,0) inset !important;
+        box-shadow: 0 0 0px 1000px rgba(0,0,0,0) inset !important;
+        background-color: transparent !important;
+        transition: background-color 5000s ease-in-out 0s !important;
+    }
+
+    input:-moz-autofill {
+        box-shadow: 0 0 0px 1000px rgba(0,0,0,0) inset !important;
+        -moz-text-fill-color: #ffffff !important;
+    }
+
+    input:-webkit-autofill {
+        animation-name: onAutoFillStart;
+        animation-duration: 0.01s;
+    }
+    @@keyframes onAutoFillStart {
+        from
+
+    {
+    }
+
+    to {
+    }
+
+    }
+
+    input::placeholder {
+        color: rgba(255,255,255,0.75);
+        opacity: 1;
+    }
+
+    @@media (max-width: 576px) {
+        .login-title
+
+    {
+        font-size: 2.0rem;
+    }
+
+    .input-line {
+        width: 90%;
+    }
+
+    .btn-outline-custom {
+        width: 90%;
+    }
+
+    .input-line label.floating-label {
+        left: 2.8rem;
+    }
+
+    }
+
+    /* pequeña ayuda visual para el panel (opcional) */
+    .subtext {
+        color: rgba(255,255,255,0.85);
+        font-size: 0.98rem;
+        max-width: 640px;
+        text-align: center;
+    }
+</style>
+
+<div class="login-hero" role="main" aria-label="Registro fondo">
+    <div class="login-container">
+        <h1 class="login-title">Registro</h1>
+        <p class="subtext">Introduce tu nombre y correo electrónico. Te enviaremos un enlace para verificar tu correo.</p>
+
+        <div class="login-card">
+            <div asp-validation-summary="All" class="alert alert-danger d-none" role="alert" id="validationSummary"></div>
+
+            <form id="formRegistro" autocomplete="on" class="login-form" method="post" asp-action="Registro">
+                @Html.AntiForgeryToken()
+                <input asp-for="ReturnUrl" type="hidden" value="@(Model?.ReturnUrl ?? string.Empty)" />
+
+                <!-- NOMBRE -->
+                <div class="input-line @(ViewData.ModelState[nameof(Model.Nombre)]?.Errors.Count > 0 ? "has-error" : "")" data-field="Nombre">
+                    <div class="control">
+                        <span class="input-icon" aria-hidden="true">
+                            <!-- icono persona -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-opacity="0.9" stroke-width="1.4"><path d="M12 12c2.761 0 5-2.238 5-5s-2.239-5-5-5-5 2.238-5 5 2.239 5 5 5z"></path><path d="M3 21c0-3.866 3.134-7 7-7h4c3.866 0 7 3.134 7 7"></path></svg>
+                        </span>
+
+                        <input asp-for="Nombre" id="Nombre" name="Nombre" type="text" maxlength="150" required autocomplete="name" />
+                        <label class="floating-label" for="Nombre">Nombre</label>
+                        <span asp-validation-for="Nombre" class="validation-msg"></span>
                     </div>
+                </div>
 
-                    <div class="mb-3">
-                        <label for="Email" class="form-label">Correo electrónico</label>
-                        <input id="Email" name="Email" type="email" class="form-control" maxlength="256" required />
-                    </div>
+                <!-- EMAIL -->
+                <div class="input-line @(ViewData.ModelState[nameof(Model.Email)]?.Errors.Count > 0 ? "has-error" : "")" data-field="Email">
+                    <div class="control">
+                        <span class="input-icon" aria-hidden="true">
+                            <!-- icono email -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-opacity="0.9" stroke-width="1.4"><path d="M3 8.5l8.5 5.5L20 8.5M3 6.5h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-11z"></path></svg>
+                        </span>
 
-                    <div class="d-flex justify-content-between">
-                        <a class="btn btn-link" href="~/">Cancelar</a>
-                        <button type="submit" class="btn btn-primary">Registrarme</button>
+                        <input asp-for="Email" id="Email" name="Email" type="email" maxlength="256" required autocomplete="email" />
+                        <label class="floating-label" for="Email">Correo electrónico</label>
+                        <span asp-validation-for="Email" class="validation-msg"></span>
                     </div>
-                </form>
-            </div>
+                </div>
+
+                <button type="submit" class="btn-outline-custom" aria-label="Enviar enlace de verificación">Enviar enlace de verificación</button>
+
+            </form>
         </div>
-    </div>
 
-    <div class="col-md-6">
-        <div class="alert alert-info">
-            <h5>Cómo funciona</h5>
-            <ul class="mb-0">
-                <li>Recibirás un enlace de acceso en tu correo (lo envía Firebase).</li>
-                <li>Al abrirlo, completarás la verificación y crearás una contraseña segura.</li>
-                <li>Luego se creará tu cuenta local y entrarás automáticamente.</li>
-            </ul>
+        <div class="footer-note">
+            ¿Ya tienes cuenta? <a href="/Account/Login" class="small-link">Inicia sesión</a>
         </div>
     </div>
 </div>
 
-<!-- Firebase SDK (compat) y nuestros scripts -->
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
 
-<script src="~/js/firebase-config.js"></script>
-<script src="~/js/registro.js"></script>
+    <!-- Firebase (solo si los usas; mantengo las referencias que tenías) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="~/js/firebase-config.js"></script>
+
+    <!-- Lógica de registro (tu archivo) -->
+    <script src="~/js/registro.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const inputLines = document.querySelectorAll('.input-line');
+
+            function applyValueState() {
+                inputLines.forEach(line => {
+                    const input = line.querySelector('input');
+                    if (!input) return;
+                    if (input.value && input.value.trim().length > 0) {
+                        line.classList.add('has-value');
+                    } else {
+                        if (!line.classList.contains('focused')) line.classList.remove('has-value');
+                    }
+                });
+            }
+
+            inputLines.forEach(line => {
+                const input = line.querySelector('input');
+                if (!input) return;
+
+                // Estado inicial si el servidor o el navegador ya puso valor
+                if (input.value && input.value.trim().length > 0) {
+                    line.classList.add('has-value');
+                }
+
+                // Focus / blur
+                input.addEventListener('focus', () => line.classList.add('focused'));
+                input.addEventListener('blur', () => {
+                    line.classList.remove('focused');
+                    if (input.value && input.value.trim().length > 0) line.classList.add('has-value');
+                    else line.classList.remove('has-value');
+                });
+
+                // Input/change/paste para detectar cambios de usuario
+                input.addEventListener('input', () => {
+                    if (input.value && input.value.trim().length > 0) line.classList.add('has-value');
+                    else line.classList.remove('has-value');
+                });
+                input.addEventListener('change', applyValueState);
+                input.addEventListener('paste', () => setTimeout(applyValueState, 10));
+            });
+
+            // Detectar autofill en navegadores que disparan animationstart (Chrome)
+            document.addEventListener('animationstart', function (e) {
+                if (e.animationName === 'onAutoFillStart') {
+                    const target = e.target;
+                    const line = target.closest('.input-line');
+                    if (line) setTimeout(() => line.classList.add('has-value'), 10);
+                }
+            }, true);
+
+            // Múltiples pasadas por si el autofill se ejecuta después
+            setTimeout(applyValueState, 50);
+            setTimeout(applyValueState, 250);
+            setTimeout(applyValueState, 800);
+            setTimeout(applyValueState, 1500);
+
+            // Mostrar validationSummary si viene con contenido desde servidor
+            const summary = document.getElementById('validationSummary');
+            if (summary && summary.textContent.trim().length > 0) summary.classList.remove('d-none');
+
+            // (Opcional) prevenir doble envío hasta que tu JS lo maneje:
+            const form = document.getElementById('formRegistro');
+            if (form) {
+                form.addEventListener('submit', function (e) {
+                    // si tu registro se maneja por JS (registro.js), podrías prevenir el submit por defecto
+                    // y dejar que registro.js haga la llamada. Si no, comenta la siguiente línea.
+                    // e.preventDefault();
+                    // form.querySelector('button[type="submit"]').setAttribute('disabled', 'true');
+                });
+            }
+        });
+    </script>
+}

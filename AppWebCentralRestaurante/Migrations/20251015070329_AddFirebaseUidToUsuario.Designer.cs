@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace AppWebCentralRestaurante.Migrations
 {
-    [DbContext(typeof(CentralContext))]
+    [DbContext(typeof(ApplicationDbContext))]
     [Migration("20251015070329_AddFirebaseUidToUsuario")]
     partial class AddFirebaseUidToUsuario
     {

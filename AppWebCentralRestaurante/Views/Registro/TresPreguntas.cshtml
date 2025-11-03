@@ -1,47 +1,335 @@
-﻿@model ReservationDraft
+﻿@model AppWebCentralRestaurante.Controllers.RegistroController.TresPreguntasDto
 @{
     Layout = "_Layout";
-
 }
 
-<div class="container mt-4">
-    <h3>Antes de continuar — 3 preguntas rápidas</h3>
-    <p class="text-muted">Nos ayudan a recomendar la experiencia adecuada y acelerar la reserva.</p>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
 
-    <form id="frm3Preguntas" method="post" asp-controller="Registro" asp-action="GuardarPreguntas">
-        <div class="mb-3">
-            <label class="form-label">¿Cuántos comensales?</label>
-            <input type="number" name="Personas" min="1" value="2" class="form-control" required />
+<style>
+    /* Fondo full-screen (mismo estilo del login) */
+    .survey-hero {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url('@Url.Content("~/images/fondoLoginRegistro.jpg")');
+        background-size: cover;
+        background-position: center center;
+        background-repeat: no-repeat;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 0;
+    }
+
+        .survey-hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.48); /* oscuro leve como en imagen */
+            z-index: 0;
+            backdrop-filter: blur(1px);
+        }
+
+    /* Card central (clara) */
+    .survey-card {
+        position: relative;
+        z-index: 2;
+        width: 86%;
+        max-width: 880px; /* ancho generoso como la imagen */
+        background: rgba(245,245,245,0.98); /* tono muy claro */
+        padding: 34px 46px;
+        border-radius: 4px;
+        box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+        border: 1px solid rgba(0,0,0,0.08);
+    }
+
+    /* Título grande centrado con serif */
+    .survey-title {
+        font-family: 'Cinzel', serif;
+        text-align: center;
+        font-size: 34px;
+        margin: 2px 0 22px 0;
+        color: #111;
+    }
+
+    .survey-intro {
+        text-align: left;
+        color: rgba(0,0,0,0.75);
+        margin-bottom: 14px;
+        font-size: 0.98rem;
+    }
+
+    /* Cada pregunta */
+    .survey-question {
+        margin: 18px 0;
+    }
+
+        .survey-question .q-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: rgba(0,0,0,0.8);
+        }
+
+    /* Opciones en grid: 4 columnas en desktop, 2 en tablet, 1 en móvil */
+    .options-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px 18px;
+        align-items: center;
+    }
+    @@media (max-width: 992px) {
+        .options-row
+
+    {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    }
+    @@media (max-width: 520px) {
+        .options-row
+
+    {
+        grid-template-columns: 1fr;
+    }
+
+    }
+
+    /* estilo de cada opción (radio + label) más elegante */
+    .opt {
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        padding: 6px 8px;
+    }
+
+        .opt input[type="radio"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #222; /* color del punto cuando seleccionado */
+        }
+
+        .opt label {
+            margin: 0;
+            cursor: pointer;
+            color: rgba(0,0,0,0.85);
+            font-size: 0.97rem;
+        }
+
+    /* input para "otra" (texto corto junto a radio) */
+    .other-text {
+        display: inline-block;
+        margin-left: 8px;
+        width: 60%;
+        max-width: 260px;
+        min-width: 100px;
+    }
+    @@media (max-width: 520px) {
+        .other-text
+
+    {
+        width: 100%;
+        margin-left: 0;
+        margin-top: 8px;
+    }
+
+    .opt {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    }
+
+    /* Botón CTA grande como en la imagen */
+    .cta-continue {
+        width: 70%;
+        max-width: 520px;
+        margin: 26px auto 6px auto;
+        display: block;
+        background: transparent;
+        color: rgba(0,0,0,0.8);
+        border: 2px solid rgba(0,0,0,0.28);
+        padding: 16px 18px;
+        border-radius: 8px;
+        font-size: 1.05rem;
+        cursor: pointer;
+        text-align: center;
+        transition: background .12s ease, transform .06s ease;
+    }
+
+        .cta-continue:hover {
+            background: rgba(0,0,0,0.03);
+            transform: translateY(-2px);
+        }
+
+    /* apariencia limpia para mensajes de validación */
+    .field-validation {
+        color: #b93a3a;
+        font-size: 0.92rem;
+        margin-top: 8px;
+    }
+
+    /* centro vertical del formulario (opcional) */
+    .survey-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 40px 0;
+        box-sizing: border-box;
+    }
+
+</style>
+
+<div class="survey-hero">
+    <div class="survey-wrapper" aria-hidden="false">
+        <div class="survey-card" role="region" aria-labelledby="tresPreguntasTitle">
+            <h2 id="tresPreguntasTitle" class="survey-title">Cuéntanos un poco sobre ti</h2>
+
+            <p class="survey-intro">Responde rápido estas preguntas para que el chatbot te ayude mejor con la reserva.</p>
+
+            <form asp-action="GuardarPreguntas" method="post" id="formTresPreguntas" novalidate>
+                @Html.AntiForgeryToken()
+
+                <!-- PREGUNTA 1 -->
+                <div class="survey-question" id="q1_block">
+                    <label class="q-label">¿Qué te trae hoy a Central?</label>
+
+                    <div class="options-row" role="radiogroup" aria-labelledby="q1_label">
+                        <div class="opt">
+                            <input class="form-check-input" asp-for="Q1" type="radio" id="q1_celebracion" name="Q1" value="Celebración especial" />
+                            <label for="q1_celebracion">Celebración especial</label>
+                        </div>
+
+                        <div class="opt">
+                            <input class="form-check-input" asp-for="Q1" type="radio" id="q1_negocios" name="Q1" value="Negocios" />
+                            <label for="q1_negocios">Negocios</label>
+                        </div>
+
+                        <div class="opt">
+                            <input class="form-check-input" asp-for="Q1" type="radio" id="q1_turistico" name="Q1" value="Turístico" />
+                            <label for="q1_turistico">Turístico</label>
+                        </div>
+
+                        <div class="opt" style="align-items:flex-start;">
+                            <div style="display:flex; align-items:center; gap:.5rem; width:100%;">
+                                <input class="form-check-input" asp-for="Q1" type="radio" id="q1_otro" name="Q1" value="Otra" />
+                                <label for="q1_otro">Otra</label>
+
+                                <input asp-for="Q1_Otro" id="q1_otro_text" name="Q1_Otro" type="text" class="form-control other-text" placeholder="Especifica..." style="display:none;" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <span asp-validation-for="Q1" class="field-validation"></span>
+                    <span asp-validation-for="Q1_Otro" class="field-validation"></span>
+                </div>
+
+                <!-- PREGUNTA 2 -->
+                <div class="survey-question" id="q2_block">
+                    <label class="q-label">¿Con quién sueles venir?</label>
+
+                    <div class="options-row" role="radiogroup" aria-labelledby="q2_label">
+                        <div class="opt">
+                            <input class="form-check-input" asp-for="Q2" type="radio" id="q2_solo" name="Q2" value="Solo" />
+                            <label for="q2_solo">Solo</label>
+                        </div>
+
+                        <div class="opt">
+                            <input class="form-check-input" asp-for="Q2" type="radio" id="q2_pareja" name="Q2" value="Pareja" />
+                            <label for="q2_pareja">Pareja</label>
+                        </div>
+
+                        <div class="opt">
+                            <input class="form-check-input" asp-for="Q2" type="radio" id="q2_familia" name="Q2" value="Familia" />
+                            <label for="q2_familia">Familia</label>
+                        </div>
+
+                        <div class="opt">
+                            <input class="form-check-input" asp-for="Q2" type="radio" id="q2_amigos" name="Q2" value="Amigos" />
+                            <label for="q2_amigos">Amigos</label>
+                        </div>
+                    </div>
+
+                    <span asp-validation-for="Q2" class="field-validation"></span>
+                </div>
+
+                <!-- PREGUNTA 3 -->
+                <div class="survey-question" id="q3_block">
+                    <label class="q-label">¿Qué estilo de cocina te atrae más?</label>
+
+                    <div class="options-row" role="radiogroup" aria-labelledby="q3_label">
+                        <div class="opt">
+                            <input class="form-check-input" asp-for="Q3" type="radio" id="q3_trad" name="Q3" value="Tradicional / criolla" />
+                            <label for="q3_trad">Tradicional / criolla</label>
+                        </div>
+
+                        <div class="opt">
+                            <input class="form-check-input" asp-for="Q3" type="radio" id="q3_fusion" name="Q3" value="Moderna / fusión" />
+                            <label for="q3_fusion">Moderna / fusión</label>
+                        </div>
+
+                        <div class="opt">
+                            <input class="form-check-input" asp-for="Q3" type="radio" id="q3_veg" name="Q3" value="Vegetariana / vegana" />
+                            <label for="q3_veg">Vegetariana / vegana</label>
+                        </div>
+
+                        <div class="opt">
+                            <input class="form-check-input" asp-for="Q3" type="radio" id="q3_gourmet" name="Q3" value="Gourmet / alta cocina" />
+                            <label for="q3_gourmet">Gourmet / alta cocina</label>
+                        </div>
+                    </div>
+
+                    <span asp-validation-for="Q3" class="field-validation"></span>
+                </div>
+
+                <button type="submit" class="cta-continue" id="btnContinue">Continuar con el chatbot</button>
+            </form>
         </div>
-
-        <div class="mb-3">
-            <label class="form-label">¿Qué experiencia te interesa?</label>
-            <select name="ExperienciaId" class="form-select" required>
-                <option value="">Seleccionar...</option>
-                @* Asume que el controlador entrega ViewData["Experiencias"] con lista *@
-                @foreach (var e in (IEnumerable<AppWebCentralRestaurante.Models.Experiencia>)ViewData["Experiencias"])
-                {
-                    <option value="@e.Id">@e.Codigo - @e.Nombre</option>
-                }
-            </select>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Restricciones o alergias (opcional)</label>
-            <textarea name="Restricciones" class="form-control" rows="2"></textarea>
-        </div>
-
-        <input type="hidden" name="NombreUsuario" value="@Model?.NombreUsuario ?? " " " />
-
-        <div class="d-flex justify-content-between">
-            <a class="btn btn-outline-secondary" href="~/">Cancelar</a>
-            <button type="submit" class="btn btn-primary">Continuar al asistente</button>
-        </div>
-    </form>
+    </div>
 </div>
 
 @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
     <script>
-        // nada especial; el form POST hace el resto
+        (function () {
+            const radioOtro = document.getElementById('q1_otro');
+            const otroText = document.getElementById('q1_otro_text');
+            const radiosQ1 = document.querySelectorAll('input[name="Q1"]');
+
+            function toggleOtro() {
+                if (!otroText) return;
+                if (radioOtro && radioOtro.checked) {
+                    otroText.style.display = 'inline-block';
+                    otroText.required = true;
+                    // focus para mejor UX
+                    setTimeout(()=> otroText.focus(), 80);
+                } else {
+                    otroText.style.display = 'none';
+                    otroText.required = false;
+                    // no borres el valor si quieres preservarlo; aquí lo limpias para evitar envíos indeseados
+                    otroText.value = '';
+                }
+            }
+
+            if (radiosQ1 && radiosQ1.length) {
+                radiosQ1.forEach(r => r.addEventListener('change', toggleOtro));
+                // marcar estado inicial (si viene pre-llenado)
+                toggleOtro();
+            }
+
+            // evitar envío múltiple (opcional)
+            const form = document.getElementById('formTresPreguntas');
+            const btn = document.getElementById('btnContinue');
+            if (form && btn) {
+                form.addEventListener('submit', function () {
+                    btn.disabled = true;
+                    btn.style.opacity = '0.7';
+                });
+            }
+        })();
     </script>
 }
