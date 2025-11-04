@@ -17,6 +17,7 @@ CREATE TABLE dbo.Usuarios (
     CreadoEn DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     ActualizadoEn DATETIME2 NULL
 );
+
 ALTER TABLE dbo.Usuarios
     ADD CONSTRAINT CHK_Usuarios_Rol CHECK (Rol IN ('Cliente','Mozo','Chef','Admin'));
 
@@ -126,3 +127,5 @@ VALUES
   (1, 'Reserva 4', 5, 2, 'No carnes, bajo en sal', '2025-04-11T11:30:00.0000000');
 
   select * from Usuarios
+
+  update Usuarios set Rol = 'Mozo' where Id = 1

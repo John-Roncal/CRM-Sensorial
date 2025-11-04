@@ -11,11 +11,7 @@ app = FastAPI(title="Chatbot FastAPI - Central", version="0.1")
 
 # CORS: ajusta orígenes
 origins = [
-    "http://localhost:4200",
-    "http://localhost:3000",
-    "http://localhost:8000",
-    "http://localhost:5242",   # <- agrega el puerto de tu app ASP.NET (ejemplo)
-    "http://127.0.0.1:5242"    # opcional: versión con 127.0.0.1
+    "https://localhost:44327"    # opcional: versión con 127.0.0.1
 ]
 app.add_middleware(
     CORSMiddleware,
