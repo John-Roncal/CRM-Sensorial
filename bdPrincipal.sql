@@ -48,6 +48,7 @@ CREATE TABLE dbo.Reservas (
     CONSTRAINT FK_Reservas_Usuario FOREIGN KEY (UsuarioId) REFERENCES dbo.Usuarios(Id) ON DELETE SET NULL,
     CONSTRAINT FK_Reservas_Experiencia FOREIGN KEY (ExperienciaId) REFERENCES dbo.Experiencias(Id) ON DELETE NO ACTION
 );
+
 ALTER TABLE dbo.Reservas
     ADD CONSTRAINT CHK_Reservas_Estado CHECK (Estado IN ('pendiente','confirmada','cancelada','completada'));
 
@@ -112,3 +113,16 @@ VALUES
   ('01', 'MENÚ DEGUSTACIÓN',                180, 'Una degustación de 12 momentos y 32 preparaciones que recorre el diverso y cambiante Perú: costa, Andes y Amazonía. Cada paso explora un ecosistema distinto, conectando ingredientes, temporadas y territorios.', 1630.00),
   ('02', 'Inmersión Central + MENÚ DEGUSTACIÓN', 360, 'Acceso exclusivo a los procesos creativos de Central a través de un recorrido por los espacios que lo conforman, culminanando con el menú degustación de 12 momentos (32 preparaciones) y maridaje.', 3653.00),
   ('03', 'THEOBROMAS LAB',                  120, 'Desde el fruto hasta la barra, esta experiencia revela el proceso detrás de los chocolates que creamos para Central, Kjolle y Mil.En nuestro laboratorio, guiados por el equipo que investiga y produce in situ, exploramos variedades nativas de Theobromas como copoazú, macambo y cacao silvestre. Analizamos, experimentamos, y al final, degustamos.', 1360.00);
+
+  INSERT INTO dbo.Reservas (NombreReserva, NumComensales, ExperienciaId, Restricciones, FechaHora)
+VALUES
+  ('Reserva 6', 2, 3, 'No ajo', '2025-03-11T10:00:00.0000000')
+  
+select * from Reservas
+
+INSERT INTO dbo.Reservas (UsuarioId, NombreReserva, NumComensales, ExperienciaId, Restricciones, FechaHora)
+VALUES
+  (1, 'Reserva 3', 4, 1, 'No mariscos, bajo en sal', '2025-04-11T10:00:00.0000000'),
+  (1, 'Reserva 4', 5, 2, 'No carnes, bajo en sal', '2025-04-11T11:30:00.0000000');
+
+  select * from Usuarios

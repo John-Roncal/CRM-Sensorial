@@ -22,10 +22,11 @@ namespace AppWebCentralRestaurante.Data
 
         public async Task<List<ReservaViewModel>> GetReservasDelDia()
         {
-            // Temporalmente se elimina el filtro de fecha para mostrar todas las reservas.
-            // var hoy = DateTime.Today;
+            //var hoy = DateTime.Today;
+            //var mañana = hoy.AddDays(1);
+
             return await Reservas
-                // .Where(r => r.FechaHora.Date == hoy)
+                //.Where(r => r.FechaHora >= hoy && r.FechaHora < mañana)
                 .Select(r => new ReservaViewModel
                 {
                     Id = r.Id,
@@ -41,6 +42,7 @@ namespace AppWebCentralRestaurante.Data
                 })
                 .ToListAsync();
         }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
