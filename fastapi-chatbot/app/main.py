@@ -10,7 +10,7 @@ load_dotenv()  # carga .env en desarrollo
 app = FastAPI(title="Chatbot FastAPI - Central", version="0.1")
 
 # CORS: ajusta orígenes
-origins = ["/*"]  # Permitir todos los orígenes; ajustar según necesidades
+origins = ["*"]  # Permitir todos los orígenes; ajustar según necesidades
 
 app.add_middleware(
     CORSMiddleware,
