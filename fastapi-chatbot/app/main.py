@@ -13,6 +13,7 @@ app = FastAPI(title="Chatbot FastAPI - Central", version="0.1")
 origins = [
     "http://localhost:5242",
     "https://localhost:7085",
+    "https://localhost:44327"
 ]
 
 app.add_middleware(
