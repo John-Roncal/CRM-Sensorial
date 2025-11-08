@@ -4,10 +4,7 @@ import pyodbc
 from fastapi.concurrency import run_in_threadpool
 from typing import Any, List, Optional, Tuple
 
-DSN = os.getenv("DB_DSN")
-
-if not DSN:
-    raise RuntimeError("DB_DSN no está definido en las variables de entorno")
+DSN = "DRIVER={ODBC Driver 17 for SQL Server};SERVER=localhost;DATABASE=DBCRMSensorialCentral;Trusted_Connection=Yes;TrustServerCertificate=Yes;"
 
 def get_conn():
     # Ajusta timeout/charset si lo necesitas

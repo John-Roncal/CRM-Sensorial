@@ -286,3 +286,5 @@ END
 
 PRINT 'Migración completada';
 GO
+
+select * from Experiencias

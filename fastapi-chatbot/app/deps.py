@@ -2,7 +2,7 @@
 import os
 from fastapi import Header, HTTPException, status, Request
 
-SERVICE_TOKEN = os.getenv("SERVICE_TOKEN")
+SERVICE_TOKEN = "mi-token-muy-secreto-GeneradoRandom123!"
 
 def validate_service_token(x_service_token: str = Header(None)):
     if not SERVICE_TOKEN:

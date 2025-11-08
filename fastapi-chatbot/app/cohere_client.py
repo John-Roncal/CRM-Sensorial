@@ -3,9 +3,7 @@ import os
 import cohere
 from fastapi.concurrency import run_in_threadpool
 
-COHERE_KEY = os.getenv("COHERE_API_KEY")
-if not COHERE_KEY:
-    raise RuntimeError("COHERE_API_KEY no definido")
+COHERE_KEY = 'xr0UHqUVyHvXYBo3a2dUVLc7oNDD18dTQILIXpY7'
 
 _client = cohere.Client(COHERE_KEY)
 
