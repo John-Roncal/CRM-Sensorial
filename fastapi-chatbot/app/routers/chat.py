@@ -712,8 +712,7 @@ async def chat_start(request: Request, response: Response, payload: schemas.Chat
         "conversation_id": str(conversation_id),
         "anon_id": str(anon_id),
         "messages": [
-            {"type": "text", "text": "Antes de proceder, necesitamos algunas respuestas para recomendarte mejor."},
-            {"type": "action", "action": "open_three_questions_form", "url": "/Registro/TresPreguntas"}
+            {"type": "text", "text": "¡Hola! ¿En qué puedo ayudarte hoy?"}
         ]
     }
 
