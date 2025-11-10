@@ -11,7 +11,7 @@ import os
 import jwt  # pip install PyJWT
 
 from app import db, schemas
-from app.cohere_client import chat as cohere_chat  # tu función async existente
+from app.gemini_client import chat as gemini_chat
 
 # Configurables vía env vars
 JWT_SECRET = os.environ.get("CHAT_JWT_SECRET", "dev-secret-change-me")
@@ -53,14 +53,15 @@ def _as_uuid(val) -> Optional[UUID]:
         return None
 
 
-async def safe_cohere_chat(prompt: str, timeout_sec: float = 3.5) -> Optional[str]:
+async def safe_gemini_chat(prompt: str, timeout_sec: float = 10.0) -> Optional[str]:
     try:
-        return await asyncio.wait_for(cohere_chat(prompt), timeout=timeout_sec)
+        # Aumentamos el timeout para dar más tiempo a Gemini
+        return await asyncio.wait_for(gemini_chat(prompt), timeout=timeout_sec)
     except asyncio.TimeoutError:
-        logger.warning("safe_cohere_chat: timeout after %.2fs", timeout_sec)
+        logger.warning("safe_gemini_chat: timeout after %.2fs", timeout_sec)
         return None
     except Exception:
-        logger.exception("safe_cohere_chat: unexpected exception")
+        logger.exception("safe_gemini_chat: unexpected exception")
         return None
 
 
@@ -265,23 +266,20 @@ async def get_profile_summary(anon_id: Optional[str], user_id: Optional[int]) ->
 
 async def build_llm_prompt(profile_ctx: str, merged_reservation: dict, experiencias: list, user_message: str) -> str:
     system = (
-        "Eres 'CRM Sensorial — Asistente de Reservas' para el restaurante Central. "
-        "Tu objetivo: ayudar al cliente a crear una reserva de experiencia respetando sus preferencias y restricciones. "
-        "Habla en español, sé breve y amable."
-        "\nAl final, OBLIGATORIAMENTE incluye un bloque JSON dentro de ```json ... ``` que describa la acción a ejecutar "
-        "con uno de los tipos: text, form, experiences, action, summary."
+        "Eres 'Amigo Central', el asistente virtual del restaurante Central. "
+        "Tu misión es ayudar a los clientes a explorar nuestras experiencias culinarias y a realizar reservas de una manera cálida, amigable y eficiente. "
+        "Habla siempre en español, con un tono cercano pero profesional. Guía al usuario paso a paso en el proceso de reserva."
+        "\nIMPORTANTE: Tu respuesta SIEMPRE debe incluir un bloque de código JSON al final, dentro de ```json ... ```."
     )
 
     instructions = (
-        "Reglas breves:\n"
-        "- Usa la información del 'Contexto cliente' si existe.\n"
-        "- Si faltan datos de reserva, pide solamente el siguiente dato imprescindible en este orden: experiencia_id -> fecha_hora -> num_comensales -> nombre_reserva -> telefono -> dni -> restricciones.\n"
-        "- Para pedir un campo, devuelve type='form' con 'field' y 'input' apropiado (text|number|datetime-local|tel). (NOTA: el servidor convertirá 'form' a texto para que la interacción sea enteramente por chat)\n"
-        "- Si el usuario solicita recomendaciones, responde con type='experiences' y items con id/nombre/precio.\n"
-        "- Si faltan restricciones alimentarias o preferencias de estilo de cocina (ej. vegetariano, gourmet, tradicional), pídelas explícitamente antes de crear la reserva.\n"
-        "- No inventes disponibilidad ni datos no confirmados.\n"
-        "- Al completar todos los campos devuelve un resumen (type='summary' con reservation object).\n"
-        "- Ejemplo de salida JSON: ```json {\"type\":\"form\",\"field\":\"fecha_hora\",\"label\":\"¿Qué fecha y hora prefieres?\",\"input\":\"datetime-local\"} ```\n"
+        "Instrucciones de conversación y JSON:\n"
+        "- Sé conversacional y amigable, no robótico.\n"
+        "- Si faltan datos para la reserva, pide el siguiente dato en este orden: experiencia -> fecha/hora -> número de personas -> nombre -> teléfono -> restricciones.\n"
+        "- Para pedir un dato, responde con una pregunta amigable y un JSON como: ```json {\"type\":\"form\",\"field\":\"fecha_hora\",\"label\":\"¿Para qué fecha y hora sería tu reserva?\"} ```\n"
+        "- Si el usuario pide recomendaciones, responde con sugerencias y un JSON como: ```json {\"type\":\"experiences\",\"items\":[{\"id\":1,\"nombre\":\"Experiencia A\"}]} ```\n"
+        "- Una vez que tengas todos los datos, muestra un resumen y el JSON: ```json {\"type\":\"summary\",\"reservation\":{...}} ```\n"
+        "- Para respuestas de texto simples, usa: ```json {\"type\":\"text\",\"text\":\"Tu respuesta aquí.\"} ```"
     )
 
     prof = f"Contexto cliente: {profile_ctx}\n" if profile_ctx else ""
@@ -1252,7 +1250,7 @@ async def chat_message(request: Request, payload: schemas.ChatMessage):
             experiencias = []
 
         llm_prompt = await build_llm_prompt(profile_ctx, merged, experiencias, message)
-        result = await safe_cohere_chat(llm_prompt, timeout_sec=6.0)
+        result = await safe_gemini_chat(llm_prompt, timeout_sec=15.0)
         if result is None:
             try:
                 recs = await quick_recommendations_by_profile(anon_id, user_id)

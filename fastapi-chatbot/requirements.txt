@@ -5,3 +5,4 @@ pyodbc
 python-dotenv
 cohere
 aiofiles
+google-genai
