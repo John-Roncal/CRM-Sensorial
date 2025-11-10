@@ -330,7 +330,87 @@ async def update_reservation(reserva_id: int, data: dict, user_id: int) -> bool:
         return False
 
 
-async def build_llm_prompt(profile_ctx: str, merged_reservation: dict, experiencias: list, user_reservations: list, user_message: str) -> str:
+async def get_user_context_by_name(name: str) -> Optional[Dict[str, Any]]:
+    """
+    Busca un usuario por nombre y devuelve su contexto (ID, perfil, historial de reservas).
+    """
+    if not name:
+        return None
+    try:
+        # Asumimos que la tabla Usuarios tiene una columna 'Nombre'. Usamos LIKE para una búsqueda flexible.
+        # Hacemos la búsqueda insensible a mayúsculas/minúsculas.
+        user_row = await db.a_fetchone("SELECT Id, Nombre FROM dbo.Usuarios WHERE LOWER(Nombre) LIKE LOWER(?)", (f"%{name.strip()}%",))
+
+        if not user_row:
+            logger.info("get_user_context_by_name: No user found for name '%s'", name)
+            return None
+
+        user_id, user_name = user_row
+
+        # 1. Obtener el perfil del usuario
+        profile_row = await db.a_fetchone("SELECT Q1, Q2, Q3 FROM dbo.Perfiles WHERE UsuarioId = ?", (user_id,))
+        perfil = {"Q1": profile_row[0], "Q2": profile_row[1], "Q3": profile_row[2]} if profile_row else {}
+
+        # 2. Obtener las últimas 3 reservas completadas para dar contexto
+        reservas_rows = await db.a_fetchall(
+            "SELECT TOP 3 Id, FechaHora, NumComensales, ExperienciaId FROM dbo.Reservas WHERE UsuarioId = ? AND Estado IN ('completada', 'confirmada') ORDER BY FechaHora DESC",
+            (user_id,)
+        )
+        reservas_pasadas = [
+            {"id": r[0], "fecha_hora": r[1].strftime("%Y-%m-%d"), "num_comensales": r[2], "experiencia_id": r[3]}
+            for r in reservas_rows
+        ]
+
+        logger.info("get_user_context_by_name: Found user_id %d for name '%s'", user_id, name)
+        return {
+            "user_id": user_id,
+            "nombre": user_name,
+            "perfil": perfil,
+            "reservas_pasadas": reservas_pasadas
+        }
+
+    except Exception:
+        logger.exception("get_user_context_by_name failed for name=%s", name)
+        return None
+
+
+async def get_user_context_by_id(user_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Busca un usuario por ID y devuelve su contexto (nombre, perfil, historial de reservas).
+    """
+    if not user_id:
+        return None
+    try:
+        user_row = await db.a_fetchone("SELECT Nombre FROM dbo.Usuarios WHERE Id = ?", (user_id,))
+        if not user_row:
+            return None
+
+        # 1. Obtener el perfil
+        profile_row = await db.a_fetchone("SELECT Q1, Q2, Q3 FROM dbo.Perfiles WHERE UsuarioId = ?", (user_id,))
+        perfil = {"Q1": profile_row[0], "Q2": profile_row[1], "Q3": profile_row[2]} if profile_row else {}
+
+        # 2. Obtener historial de reservas
+        reservas_rows = await db.a_fetchall(
+            "SELECT TOP 3 Id, FechaHora, NumComensales, ExperienciaId FROM dbo.Reservas WHERE UsuarioId = ? AND Estado IN ('completada', 'confirmada') ORDER BY FechaHora DESC",
+            (user_id,)
+        )
+        reservas_pasadas = [
+            {"id": r[0], "fecha_hora": r[1].strftime("%Y-%m-%d"), "num_comensales": r[2], "experiencia_id": r[3]}
+            for r in reservas_rows
+        ]
+
+        return {
+            "user_id": user_id,
+            "nombre": user_row[0],
+            "perfil": perfil,
+            "reservas_pasadas": reservas_pasadas
+        }
+    except Exception:
+        logger.exception("get_user_context_by_id failed for user_id=%s", user_id)
+        return None
+
+
+async def build_llm_prompt(user_context: Optional[Dict[str, Any]], merged_reservation: dict, experiencias: list, user_message: str) -> str:
     system = (
         "Eres 'Amigo Central', el asistente virtual del restaurante Central. "
         "Tu misión es ayudar a los clientes a explorar nuestras experiencias culinarias y a realizar o modificar reservas de una manera cálida, amigable y eficiente. "
@@ -340,40 +420,41 @@ async def build_llm_prompt(profile_ctx: str, merged_reservation: dict, experienc
 
     instructions = (
         "Instrucciones de conversación y JSON:\n"
-        "1. Flujo de NUEVA RESERVA:\n"
+        "1. PERSONALIZACIÓN:\n"
+        "- Si tienes el contexto de un usuario existente (historial, preferencias), ¡ÚSALO! Dale una bienvenida personalizada y hazle recomendaciones basadas en sus visitas anteriores.\n"
+        "- Ejemplo: '¡Hola de nuevo, [Nombre]! Veo que la última vez disfrutaste de la experiencia [X]. ¿Te gustaría probar [Y], que es similar, o prefieres algo nuevo?'\n"
+        "\n2. Flujo de NUEVA RESERVA:\n"
         "- Si faltan datos para una nueva reserva, pide el siguiente dato en este orden: experiencia -> fecha/hora -> número de personas -> nombre -> teléfono -> restricciones.\n"
         "- Para pedir un dato, responde con una pregunta amigable y un JSON como: ```json {\"type\":\"form\",\"field\":\"fecha_hora\",\"label\":\"¿Para qué fecha y hora sería tu reserva?\"} ```\n"
-        "- Una vez que tengas TODOS los datos para una nueva reserva, muestra un resumen final y OBLIGATORIAMENTE incluye esta acción: ```json {\"type\":\"action\",\"action\":\"create_provisional_reservation\"} ```\n"
-        "\n2. Flujo de EDICIÓN DE RESERVA:\n"
-        "- Si el usuario quiere 'cambiar', 'modificar' o 'editar' su reserva, primero comprueba si tiene reservas activas.\n"
-        "- Si hay varias, pregúntale cuál quiere modificar (usando el ID de la reserva).\n"
-        "- Luego, pregúntale qué campo quiere cambiar (fecha, personas, etc.).\n"
+        "- Una vez que tengas TODOS los datos, muestra un resumen final y OBLIGATORIAMENTE incluye esta acción: ```json {\"type\":\"action\",\"action\":\"create_provisional_reservation\"} ```\n"
+        "\n3. Flujo de EDICIÓN DE RESERVA:\n"
+        "- Si el usuario quiere 'cambiar' o 'editar' una reserva, usa el contexto de sus reservas activas para identificar cuál quiere modificar. Si solo hay una, asume que es esa.\n"
         "- Una vez que tengas el ID de la reserva y el nuevo valor, genera la acción para editarla. Ejemplo: ```json {\"type\":\"action\",\"action\":\"edit_reservation\",\"payload\":{\"reserva_id\":123,\"fecha_hora\":\"2025-12-24T20:00\"}} ```\n"
-        "\n3. Reglas Generales:\n"
-        "- MUY IMPORTANTE: Cuando manejes fechas y horas (ej: 'mañana a las 8pm'), DEBES normalizarlas al formato YYYY-MM-DDTHH:MM. Usa la fecha actual como referencia.\n"
-        "- Si el usuario pide recomendaciones, responde con sugerencias y un JSON como: ```json {\"type\":\"experiences\",\"items\":[{\"id\":1,\"nombre\":\"Experiencia A\"}]} ```\n"
+        "\n4. Reglas Generales:\n"
+        "- MUY IMPORTANTE: Cuando manejes fechas y horas, DEBES normalizarlas al formato YYYY-MM-DDTHH:MM.\n"
         "- Para respuestas de texto simples, usa: ```json {\"type\":\"text\",\"text\":\"Tu respuesta aquí.\"} ```"
     )
 
-    prof = f"Contexto cliente: {profile_ctx}\n" if profile_ctx else ""
+    # Construcción del contexto para la IA
+    context_parts = []
+    if user_context:
+        context_parts.append(f"Contexto del Usuario: Nombre: {user_context.get('nombre')}")
+        if user_context.get('perfil'):
+            context_parts.append(f"Preferencias: {json.dumps(user_context.get('perfil'))}")
+        if user_context.get('reservas_pasadas'):
+            context_parts.append(f"Historial de Reservas: {json.dumps(user_context.get('reservas_pasadas'))}")
+        if user_context.get('reservas_activas'):
+             context_parts.append(f"Reservas Activas: {json.dumps(user_context.get('reservas_activas'))}")
 
-    reservations_txt = ""
-    if user_reservations:
-        res_lines = [f"- ID: {r['id']}, Fecha: {r['fecha_hora']}, Personas: {r['num_comensales']}, Nombre: {r['nombre_reserva']}" for r in user_reservations]
-        reservations_txt = "Reservas activas del usuario:\n" + "\n".join(res_lines) + "\n"
-
-    merged_txt = ""
     if merged_reservation:
-        merged_pairs = ", ".join(f"{k}={v}" for k, v in merged_reservation.items())
-        merged_txt = f"Datos para nueva reserva en progreso: {merged_pairs}\n"
+        context_parts.append(f"Datos para nueva reserva en progreso: {json.dumps(merged_reservation)}")
 
-    exper_txt = ""
     if experiencias:
-        lines = [f"{e['id']}. {e['nombre']}" + (f" ({e['precio']})" if e.get('precio') else "") for e in experiencias]
-        exper_txt = "Experiencias disponibles (id - nombre):\n" + "\n".join(lines) + "\n"
+        exper_summary = ", ".join([f"{e['id']}-{e['nombre']}" for e in experiencias])
+        context_parts.append(f"Experiencias disponibles (id-nombre): {exper_summary}")
 
-    context = "\n".join(filter(None, [prof, reservations_txt, merged_txt, exper_txt]))
-    prompt = "\n\n".join([system, instructions, context, f"Usuario: {user_message}\nAsistente:"])
+    context_str = "\n".join(context_parts)
+    prompt = "\n\n".join([system, instructions, context_str, f"Usuario: {user_message}\nAsistente:"])
     return prompt
 
 
@@ -634,112 +715,11 @@ async def chat_start(request: Request, response: Response, payload: schemas.Chat
 
     logger.debug("chat_start called: conversation_id=%s user_id=%s anon_id=%s", conversation_id, incoming_user_id, anon_id)
 
-    async def perfil_completo_por_usuario(user_id: int) -> bool:
-        try:
-            row = await db.a_fetchone("SELECT PerfilId, EstadoPerfilCompleto, Q1, Q2, Q3 FROM dbo.Perfiles WHERE UsuarioId = ?", (user_id,))
-            if not row:
-                return False
-            _, estado, q1, q2, q3 = row
-            return bool(estado) or (q1 and q2 and q3)
-        except Exception:
-            logger.exception("perfil_completo_por_usuario error")
-            return False
+    # El flujo de inicio ahora es siempre el mismo: pedir el nombre para personalizar.
+    # Toda la lógica de si el perfil está completo o no se moverá al endpoint /message,
+    # después de que tengamos el nombre del usuario.
 
-    async def perfil_completo_por_anon(aid) -> bool:
-        try:
-            row = await db.a_fetchone("SELECT PerfilId, EstadoPerfilCompleto, Q1, Q2, Q3 FROM dbo.Perfiles WHERE AnonId = ?", (str(aid),))
-            if not row:
-                return False
-            _, estado, q1, q2, q3 = row
-            return bool(estado) or (q1 and q2 and q3)
-        except Exception:
-            logger.exception("perfil_completo_por_anon error")
-            return False
-
-    # --- si perfil completo: en lugar de enviar una lista UI, enviamos RECOMENDACIONES (3 max)
-    if incoming_user_id:
-        try:
-            if await perfil_completo_por_usuario(incoming_user_id):
-                try:
-                    exp_rows = await db.a_fetchall("SELECT Id, Nombre, Precio FROM dbo.Experiencias WHERE Activa = 1 ORDER BY Nombre")
-                    experiencias = [{"id": int(r[0]), "nombre": r[1], "precio": float(r[2] or 0)} for r in exp_rows]
-                except Exception:
-                    logger.exception("failed to fetch experiencias")
-                    experiencias = []
-
-                try:
-                    await db.a_execute(
-                        "INSERT INTO dbo.Eventos (EventType, AnonId, ConversationId, SenderId, Payload) VALUES (?,?,?,?,?)",
-                        ("conversation.started", str(anon_id) if anon_id else None, str(conversation_id), "fastapi-chatbot", "{}")
-                    )
-                except Exception:
-                    logger.exception("failed to log event conversation.started (user)")
-
-                # obtener recomendaciones; si none -> tomar al azar
-                recs = await quick_recommendations_by_profile(None, incoming_user_id, topk=3)
-                if not recs and experiencias:
-                    recs = random.sample(experiencias, min(3, len(experiencias)))
-
-                if recs:
-                    lines = [f"{r['id']}. {r['nombre']} (Precio: {r['precio']})" for r in recs]
-                    rec_text = "Te recomiendo estas experiencias:\n" + "\n".join(lines) + "\n\nResponde con el ID para seleccionar una experiencia, o escribe otra cosa para que te ayude."
-                else:
-                    rec_text = "No encuentro recomendaciones específicas ahora — dime qué buscas o escribe 'recomiéndame' para que te sugiera opciones."
-
-                welcome_text = "Bienvenido de nuevo. Veo tus preferencias guardadas — esto me ayudará a recomendarte mejor."
-
-                return {
-                    "conversation_id": str(conversation_id),
-                    "anon_id": str(anon_id) if anon_id else None,
-                    "messages": [
-                        {"type": "text", "text": welcome_text},
-                        {"type": "text", "text": rec_text},
-                        {"type": "action", "action": "proceed_to_reserva"}
-                    ]
-                }
-        except Exception:
-            logger.exception("error checking perfil por usuario; falling back to anon flow")
-
-    if anon_id:
-        try:
-            if await perfil_completo_por_anon(anon_id):
-                try:
-                    exp_rows = await db.a_fetchall("SELECT Id, Nombre, Precio FROM dbo.Experiencias WHERE Activa = 1 ORDER BY Nombre")
-                    experiencias = [{"id": int(r[0]), "nombre": r[1], "precio": float(r[2] or 0)} for r in exp_rows]
-                except Exception:
-                    logger.exception("failed to fetch experiencias")
-                    experiencias = []
-
-                try:
-                    await db.a_execute(
-                        "INSERT INTO dbo.Eventos (EventType, AnonId, ConversationId, SenderId, Payload) VALUES (?,?,?,?,?)",
-                        ("conversation.started", str(anon_id) if anon_id else None, str(conversation_id), "fastapi-chatbot", "{}")
-                    )
-                except Exception:
-                    logger.exception("failed to log event conversation.started (anon)")
-
-                recs = await quick_recommendations_by_profile(str(anon_id), None, topk=3)
-                if not recs and experiencias:
-                    recs = random.sample(experiencias, min(3, len(experiencias)))
-
-                if recs:
-                    lines = [f"{r['id']}. {r['nombre']} (Precio: {r['precio']})" for r in recs]
-                    rec_text = "¡Hola! Puedo recomendarte estas experiencias:\n" + "\n".join(lines) + "\n\nResponde con el ID para seleccionar una, o escribe otra cosa."
-                else:
-                    rec_text = "¡Hola! No tengo recomendaciones claras todavía. Dime qué prefieres o escribe 'recomiéndame'."
-
-                return {
-                    "conversation_id": str(conversation_id),
-                    "anon_id": str(anon_id),
-                    "messages": [
-                        {"type": "text", "text": rec_text},
-                        {"type": "action", "action": "proceed_to_reserva"}
-                    ]
-                }
-        except Exception:
-            logger.exception("error checking perfil por anon; continuing to ensure anon session")
-
-    # ensure anon session exists (profile not complete)
+    # Aseguramos que la sesión anónima exista y la cookie esté configurada.
     if not anon_id:
         new_anon = uuid4()
         try:
@@ -747,9 +727,9 @@ async def chat_start(request: Request, response: Response, payload: schemas.Chat
                 "INSERT INTO dbo.AnonSessions (AnonId, Estado, CreadoEn) VALUES (?,?,GETUTCDATE())",
                 (str(new_anon), "activo")
             )
+            anon_id = new_anon
         except Exception:
             logger.exception("failed to insert anon session for new anon")
-        anon_id = new_anon
     else:
         try:
             r = await db.a_fetchone("SELECT AnonId FROM dbo.AnonSessions WHERE AnonId = ?", (str(anon_id),))
@@ -763,7 +743,6 @@ async def chat_start(request: Request, response: Response, payload: schemas.Chat
 
     try:
         secure_cookie = (request.url.scheme == "https")
-        # Para cross-site frontend/backend, usar samesite="none" y secure=True (https req.)
         samesite_val = "none" if secure_cookie else "lax"
         response.set_cookie(
             key="anon_id",
@@ -777,23 +756,25 @@ async def chat_start(request: Request, response: Response, payload: schemas.Chat
     except Exception:
         logger.exception("failed to set anon_id cookie (non-fatal)")
 
-
+    # Registramos el inicio de la conversación
     try:
         await db.a_execute(
                 "INSERT INTO dbo.Eventos (EventType, AnonId, ConversationId, SenderId, Payload) VALUES (?,?,?,?,?)",
-                 ("conversation.started", str(anon_id) if anon_id else None, str(conversation_id), "fastapi-chatbot", "{}")
+                 ("conversation.started", str(anon_id), str(conversation_id), "fastapi-chatbot", "{}")
         )
     except Exception:
-        logger.exception("failed to log conversation.started event (anon)")
+        logger.exception("failed to log conversation.started event")
 
-    # --- Flujo de perfilado para usuarios nuevos (sin perfil completo) ---
-    # Si llegamos aquí, el usuario no tiene un perfil completo, así que iniciamos las 3 preguntas.
+    # Enviamos el mensaje inicial para preguntar el nombre.
     return {
         "conversation_id": str(conversation_id),
         "anon_id": str(anon_id),
         "messages": [
-            {"type": "text", "text": "¡Bienvenido a Amigo Central! Antes de empezar, me gustaría hacerte 3 preguntas rápidas para conocer tus preferencias y darte mejores recomendaciones."},
-            {"type": "action", "action": "redirect_to_tres_preguntas"}
+            {
+                "type": "form",
+                "field": "user_name_lookup",
+                "label": "¡Hola! Soy Amigo Central. Para darte una experiencia más personalizada, ¿podrías decirme tu nombre completo?"
+            }
         ]
     }
 
@@ -899,6 +880,38 @@ async def chat_message(request: Request, payload: schemas.ChatMessage):
 
     message = getattr(payload, "message", None) or getattr(payload, "Message", None)
 
+    # --- Lógica de BÚSQUEDA DE USUARIO POR NOMBRE ---
+    # Este bloque se activa solo al principio de la conversación, cuando el frontend envía el nombre.
+    if message and payload.reservation_field == "user_name_lookup":
+        user_context = await get_user_context_by_name(message)
+
+        if user_context:
+            # Usuario encontrado: Personalizamos la bienvenida y guardamos su ID para el resto de la conversación.
+            user_id = user_context.get("user_id")
+            await save_reservation_partial(str(conversation_id), anon_id, "user_id", user_id)
+
+            # Construimos un mensaje de bienvenida personalizado
+            welcome_back_msg = f"¡Hola de nuevo, {user_context.get('nombre')}! Qué bueno verte por aquí."
+            # Aquí podrías añadir más contexto, como "Veo que tu última visita fue..."
+
+            return {
+                "conversation_id": str(conversation_id),
+                "messages": [
+                    {"type": "text", "text": welcome_back_msg},
+                    {"type": "text", "text": "¿Qué te gustaría hacer hoy? Puedo ayudarte a reservar una mesa o a explorar nuestras experiencias."}
+                ]
+            }
+        else:
+            # Usuario no encontrado: Iniciamos el flujo de perfilado para nuevos clientes.
+            return {
+                "conversation_id": str(conversation_id),
+                "messages": [
+                    {"type": "text", "text": "Parece que es tu primera vez por aquí. ¡Bienvenido!"},
+                    {"type": "text", "text": "Para conocerte mejor, te haré 3 preguntas rápidas que nos ayudarán a darte las mejores recomendaciones."},
+                    {"type": "action", "action": "redirect_to_tres_preguntas"}
+                ]
+            }
+
     # --- Lógica de perfilado (Manejo de QKey/QAnswer) ---
     if qkey and qanswer:
         # Validar qkey
@@ -938,18 +951,27 @@ async def chat_message(request: Request, payload: schemas.ChatMessage):
         return {"conversation_id": str(conversation_id), "messages": [{"type": "text", "text": "Por favor, envía un mensaje."}]}
 
     # A partir de aquí, toda la lógica depende de Gemini para ser conversacional.
-    profile_ctx = await get_profile_summary(anon_id, user_id)
+
+    # Primero, recuperamos el estado actual de la conversación
     merged = await get_merged_reservation(str(conversation_id))
+
+    # Si ya hemos identificado al usuario en pasos anteriores, recuperamos su contexto completo.
+    # El user_id se pudo haber obtenido del JWT, o guardado en la conversación tras la búsqueda por nombre.
+    final_user_id = user_id or merged.get("user_id")
+    user_context = None
+    if final_user_id:
+        user_context = await get_user_context_by_id(final_user_id)
+        if user_context:
+            # Añadimos también las reservas activas, que son importantes para el flujo de edición.
+            user_context["reservas_activas"] = await get_user_reservations(final_user_id)
+
     try:
         rows = await db.a_fetchall("SELECT Id, Nombre, Precio FROM dbo.Experiencias WHERE Activa = 1 ORDER BY Nombre")
         experiencias = [{"id": int(r[0]), "nombre": r[1], "precio": float(r[2] or 0)} for r in rows]
     except Exception:
         experiencias = []
 
-    # Obtener las reservas del usuario para el contexto de edición
-    user_reservations = await get_user_reservations(user_id)
-
-    llm_prompt = await build_llm_prompt(profile_ctx, merged, experiencias, user_reservations, message)
+    llm_prompt = await build_llm_prompt(user_context, merged, experiencias, message)
     result = await safe_gemini_chat(llm_prompt, timeout_sec=15.0)
 
     if result is None:
