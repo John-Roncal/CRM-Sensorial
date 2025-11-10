@@ -264,36 +264,116 @@ async def get_profile_summary(anon_id: Optional[str], user_id: Optional[int]) ->
         return ""
 
 
-async def build_llm_prompt(profile_ctx: str, merged_reservation: dict, experiencias: list, user_message: str) -> str:
+async def get_user_reservations(user_id: Optional[int]) -> List[Dict[str, Any]]:
+    if not user_id:
+        return []
+    try:
+        rows = await db.a_fetchall(
+            "SELECT Id, FechaHora, NumComensales, NombreReserva, Estado FROM dbo.Reservas WHERE UsuarioId = ? AND Estado IN ('pendiente', 'confirmada') ORDER BY FechaHora ASC",
+            (user_id,)
+        )
+        return [
+            {
+                "id": r[0],
+                "fecha_hora": r[1].strftime("%Y-%m-%dT%H:%M") if r[1] else "No especificada",
+                "num_comensales": r[2],
+                "nombre_reserva": r[3],
+                "estado": r[4]
+            }
+            for r in rows
+        ]
+    except Exception:
+        logger.exception("get_user_reservations failed")
+        return []
+
+
+async def update_reservation(reserva_id: int, data: dict, user_id: int) -> bool:
+    if not reserva_id or not data or not user_id:
+        return False
+
+    # Mapeo de claves de la API a columnas de la base de datos
+    FIELD_MAP = {
+        "fecha_hora": "FechaHora",
+        "num_comensales": "NumComensales",
+        "nombre_reserva": "NombreReserva",
+        "restricciones": "Restricciones",
+        "telefono": "Telefono",
+        "dni": "DNI",
+        "experiencia_id": "ExperienciaId"
+    }
+
+    # Construir la consulta de actualización dinámicamente
+    set_clauses = []
+    params = []
+    for key, value in data.items():
+        if key in FIELD_MAP:
+            set_clauses.append(f"{FIELD_MAP[key]} = ?")
+            params.append(value)
+
+    if not set_clauses:
+        logger.warning("update_reservation: no valid fields to update")
+        return False
+
+    # Añadir el ID de la reserva y el ID de usuario a los parámetros para el WHERE
+    params.append(reserva_id)
+    params.append(user_id)
+
+    query = f"UPDATE dbo.Reservas SET {', '.join(set_clauses)} WHERE Id = ? AND UsuarioId = ?"
+
+    try:
+        # Ejecutar la consulta y verificar si se actualizó alguna fila
+        result = await db.a_execute(query, tuple(params))
+        # a_execute devuelve el número de filas afectadas
+        return result > 0
+    except Exception:
+        logger.exception("update_reservation failed for reserva_id %s", reserva_id)
+        return False
+
+
+async def build_llm_prompt(profile_ctx: str, merged_reservation: dict, experiencias: list, user_reservations: list, user_message: str) -> str:
     system = (
         "Eres 'Amigo Central', el asistente virtual del restaurante Central. "
-        "Tu misión es ayudar a los clientes a explorar nuestras experiencias culinarias y a realizar reservas de una manera cálida, amigable y eficiente. "
-        "Habla siempre en español, con un tono cercano pero profesional. Guía al usuario paso a paso en el proceso de reserva."
+        "Tu misión es ayudar a los clientes a explorar nuestras experiencias culinarias y a realizar o modificar reservas de una manera cálida, amigable y eficiente. "
+        "Habla siempre en español, con un tono cercano pero profesional. Guía al usuario paso a paso."
         "\nIMPORTANTE: Tu respuesta SIEMPRE debe incluir un bloque de código JSON al final, dentro de ```json ... ```."
     )
 
     instructions = (
         "Instrucciones de conversación y JSON:\n"
-        "- Sé conversacional y amigable, no robótico.\n"
-        "- Si faltan datos para la reserva, pide el siguiente dato en este orden: experiencia -> fecha/hora -> número de personas -> nombre -> teléfono -> restricciones.\n"
+        "1. Flujo de NUEVA RESERVA:\n"
+        "- Si faltan datos para una nueva reserva, pide el siguiente dato en este orden: experiencia -> fecha/hora -> número de personas -> nombre -> teléfono -> restricciones.\n"
         "- Para pedir un dato, responde con una pregunta amigable y un JSON como: ```json {\"type\":\"form\",\"field\":\"fecha_hora\",\"label\":\"¿Para qué fecha y hora sería tu reserva?\"} ```\n"
+        "- Una vez que tengas TODOS los datos para una nueva reserva, muestra un resumen final y OBLIGATORIAMENTE incluye esta acción: ```json {\"type\":\"action\",\"action\":\"create_provisional_reservation\"} ```\n"
+        "\n2. Flujo de EDICIÓN DE RESERVA:\n"
+        "- Si el usuario quiere 'cambiar', 'modificar' o 'editar' su reserva, primero comprueba si tiene reservas activas.\n"
+        "- Si hay varias, pregúntale cuál quiere modificar (usando el ID de la reserva).\n"
+        "- Luego, pregúntale qué campo quiere cambiar (fecha, personas, etc.).\n"
+        "- Una vez que tengas el ID de la reserva y el nuevo valor, genera la acción para editarla. Ejemplo: ```json {\"type\":\"action\",\"action\":\"edit_reservation\",\"payload\":{\"reserva_id\":123,\"fecha_hora\":\"2025-12-24T20:00\"}} ```\n"
+        "\n3. Reglas Generales:\n"
+        "- MUY IMPORTANTE: Cuando manejes fechas y horas (ej: 'mañana a las 8pm'), DEBES normalizarlas al formato YYYY-MM-DDTHH:MM. Usa la fecha actual como referencia.\n"
         "- Si el usuario pide recomendaciones, responde con sugerencias y un JSON como: ```json {\"type\":\"experiences\",\"items\":[{\"id\":1,\"nombre\":\"Experiencia A\"}]} ```\n"
-        "- Una vez que tengas todos los datos, muestra un resumen y el JSON: ```json {\"type\":\"summary\",\"reservation\":{...}} ```\n"
         "- Para respuestas de texto simples, usa: ```json {\"type\":\"text\",\"text\":\"Tu respuesta aquí.\"} ```"
     )
 
     prof = f"Contexto cliente: {profile_ctx}\n" if profile_ctx else ""
+
+    reservations_txt = ""
+    if user_reservations:
+        res_lines = [f"- ID: {r['id']}, Fecha: {r['fecha_hora']}, Personas: {r['num_comensales']}, Nombre: {r['nombre_reserva']}" for r in user_reservations]
+        reservations_txt = "Reservas activas del usuario:\n" + "\n".join(res_lines) + "\n"
+
     merged_txt = ""
     if merged_reservation:
         merged_pairs = ", ".join(f"{k}={v}" for k, v in merged_reservation.items())
-        merged_txt = f"Parciales de reserva actuales: {merged_pairs}\n"
+        merged_txt = f"Datos para nueva reserva en progreso: {merged_pairs}\n"
 
     exper_txt = ""
     if experiencias:
         lines = [f"{e['id']}. {e['nombre']}" + (f" ({e['precio']})" if e.get('precio') else "") for e in experiencias]
-        exper_txt = "Experiencias activas (id - nombre):\n" + "\n".join(lines) + "\n"
+        exper_txt = "Experiencias disponibles (id - nombre):\n" + "\n".join(lines) + "\n"
 
-    prompt = "\n\n".join([system, instructions, prof + merged_txt + exper_txt, f"Usuario: {user_message}\nAsistente:"])
+    context = "\n".join(filter(None, [prof, reservations_txt, merged_txt, exper_txt]))
+    prompt = "\n\n".join([system, instructions, context, f"Usuario: {user_message}\nAsistente:"])
     return prompt
 
 
@@ -706,11 +786,14 @@ async def chat_start(request: Request, response: Response, payload: schemas.Chat
     except Exception:
         logger.exception("failed to log conversation.started event (anon)")
 
+    # --- Flujo de perfilado para usuarios nuevos (sin perfil completo) ---
+    # Si llegamos aquí, el usuario no tiene un perfil completo, así que iniciamos las 3 preguntas.
     return {
         "conversation_id": str(conversation_id),
         "anon_id": str(anon_id),
         "messages": [
-            {"type": "text", "text": "¡Hola! ¿En qué puedo ayudarte hoy?"}
+            {"type": "text", "text": "¡Bienvenido a Amigo Central! Antes de empezar, me gustaría hacerte 3 preguntas rápidas para conocer tus preferencias y darte mejores recomendaciones."},
+            {"type": "action", "action": "redirect_to_tres_preguntas"}
         ]
     }
 
@@ -815,6 +898,42 @@ async def chat_message(request: Request, payload: schemas.ChatMessage):
     qanswer = getattr(payload, "qanswer", None) or getattr(payload, "QAnswer", None)
 
     message = getattr(payload, "message", None) or getattr(payload, "Message", None)
+
+    # --- Lógica de perfilado (Manejo de QKey/QAnswer) ---
+    if qkey and qanswer:
+        # Validar qkey
+        if qkey not in ("Q1", "Q2", "Q3"):
+            raise HTTPException(status_code=400, detail=f"Invalid qkey: {qkey}")
+
+        # Guardar la respuesta del perfil
+        try:
+            # Determinar si se usa user_id o anon_id
+            identifier_col = "UsuarioId" if user_id else "AnonId"
+            identifier_val = user_id if user_id else anon_id
+
+            if not identifier_val:
+                 raise HTTPException(status_code=400, detail="Cannot save profile answer without user_id or anon_id")
+
+            # Comprobar si ya existe un perfil
+            existing_profile = await db.a_fetchone(f"SELECT PerfilId FROM dbo.Perfiles WHERE {identifier_col} = ?", (identifier_val,))
+
+            if existing_profile:
+                # Actualizar perfil existente
+                await db.a_execute(f"UPDATE dbo.Perfiles SET {qkey} = ? WHERE {identifier_col} = ?", (qanswer, identifier_val))
+            else:
+                # Crear nuevo perfil
+                await db.a_execute(f"INSERT INTO dbo.Perfiles ({identifier_col}, {qkey}) VALUES (?, ?)", (identifier_val, qanswer))
+
+            # Comprobar si el perfil ya está completo
+            if qkey == "Q3":
+                # Marcar como completo y proceder
+                await db.a_execute(f"UPDATE dbo.Perfiles SET EstadoPerfilCompleto = 1 WHERE {identifier_col} = ?", (identifier_val,))
+                return {"conversation_id": str(conversation_id), "messages": [{"type": "action", "action": "profile_complete_proceed_to_chat"}]}
+
+        except Exception:
+            logger.exception("Failed to save profile answer for qkey=%s", qkey)
+            # No bloqueamos al usuario, solo logueamos el error y continuamos
+
     if not message:
         return {"conversation_id": str(conversation_id), "messages": [{"type": "text", "text": "Por favor, envía un mensaje."}]}
 
@@ -827,7 +946,10 @@ async def chat_message(request: Request, payload: schemas.ChatMessage):
     except Exception:
         experiencias = []
 
-    llm_prompt = await build_llm_prompt(profile_ctx, merged, experiencias, message)
+    # Obtener las reservas del usuario para el contexto de edición
+    user_reservations = await get_user_reservations(user_id)
+
+    llm_prompt = await build_llm_prompt(profile_ctx, merged, experiencias, user_reservations, message)
     result = await safe_gemini_chat(llm_prompt, timeout_sec=15.0)
 
     if result is None:
@@ -853,6 +975,46 @@ async def chat_message(request: Request, payload: schemas.ChatMessage):
             for key, value in reservation_data.items():
                 if value is not None:
                     await save_reservation_partial(str(conversation_id), anon_id, key, value)
+
+        # Si Gemini nos pide crear la reserva, lo hacemos ahora
+        if parsed.get("type") == "action" and parsed.get("action") == "create_provisional_reservation":
+            try:
+                # Obtenemos todos los datos guardados en la conversación
+                merged_data = await get_merged_reservation(str(conversation_id))
+                # Creamos la reserva provisional
+                result = await create_provisional_reservation(merged_data, user_id, anon_id, str(conversation_id))
+
+                # Devolvemos un resumen final al usuario
+                return {
+                    "conversation_id": str(conversation_id),
+                    "messages": [
+                        {"type": "text", "text": "¡Perfecto! He creado tu reserva provisional con los siguientes datos:"},
+                        {"type": "summary", "reservation": result.get("reservation_obj", {})}
+                    ]
+                }
+            except Exception as e:
+                logger.exception("Error al crear la reserva provisional")
+                return {"conversation_id": str(conversation_id), "messages": [{"type": "text", "text": f"Lo siento, ha ocurrido un error al crear tu reserva: {e}"}]}
+
+        # Si Gemini nos pide editar la reserva, lo hacemos
+        if parsed.get("type") == "action" and parsed.get("action") == "edit_reservation":
+            payload = parsed.get("payload", {})
+            reserva_id = payload.pop("reserva_id", None)
+
+            if not user_id:
+                return {"conversation_id": str(conversation_id), "messages": [{"type": "text", "text": "Lo siento, necesitas haber iniciado sesión para poder editar una reserva."}]}
+            if not reserva_id:
+                 return {"conversation_id": str(conversation_id), "messages": [{"type": "text", "text": "No he entendido qué reserva quieres modificar. ¿Podrías indicarme su número de referencia?"}]}
+
+            try:
+                success = await update_reservation(reserva_id, payload, user_id)
+                if success:
+                    return {"conversation_id": str(conversation_id), "messages": [{"type": "text", "text": f"¡Listo! He actualizado tu reserva con ID {reserva_id}."}]}
+                else:
+                    return {"conversation_id": str(conversation_id), "messages": [{"type": "text", "text": f"No pude actualizar la reserva {reserva_id}. Es posible que no te pertenezca o que ya no esté activa."}]}
+            except Exception as e:
+                logger.exception("Error al editar la reserva")
+                return {"conversation_id": str(conversation_id), "messages": [{"type": "text", "text": f"Lo siento, ha ocurrido un error al editar tu reserva: {e}"}]}
 
         # Devolvemos el mensaje, que puede ser texto, un formulario, etc.
         return {"conversation_id": str(conversation_id), "messages": [parsed]}
