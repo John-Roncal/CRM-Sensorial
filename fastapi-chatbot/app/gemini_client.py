@@ -16,7 +16,7 @@ genai.configure(api_key=GEMINI_API_KEY)
 # --- Modelo Generativo ---
 # Seleccionamos el modelo de Gemini que vamos a utilizar
 # 'gemini-pro' es un modelo robusto y versátil ideal para chat.
-model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 def sync_chat(prompt: str):
     """
