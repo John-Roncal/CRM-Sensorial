@@ -1,8 +1,0 @@
-fastapi
-uvicorn[standard]
-pydantic
-pyodbc
-python-dotenv
-cohere
-aiofiles
-google-genai
