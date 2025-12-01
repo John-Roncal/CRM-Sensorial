@@ -3,14 +3,13 @@
 @using System.Security.Claims
 @{
     Layout = "_Layout";
-    // obtenemos claim de forma segura en servidor
+
     var idClaim = User?.FindFirst(ClaimTypes.NameIdentifier) ?? User?.FindFirst("sub") ?? User?.FindFirst("id");
     var jsUserId = idClaim != null ? idClaim.Value : null;
-    // Ajusta la URL del chat al host/puerto donde corre FastAPI:
-    var chatApiUrl = "http://localhost:8000/chat"; // <-- Cambia si tu FastAPI está en otra URL
 }
 
 <style>
+    /* Tu CSS de estilos (sin cambios) */
     :root {
         --modal-bg: #e9e8e8;
         --header-bg: #352827;
@@ -98,6 +97,14 @@
         background: transparent;
     }
 
+    /* Estilos para las burbujas de chat.
+          El nuevo chat.js las crea con las clases:
+          - 'bg-primary text-white ms-auto' (usuario)
+          - 'bg-light text-dark' (bot)
+
+          Si quieres usar TUS estilos (assistant-bubble, user-bubble),
+          deberás modificar la función appendMessage() en el nuevo chat.js
+        */
     .message-row {
         display: flex;
         align-items: flex-end;
@@ -217,29 +224,27 @@
     }
 
     @@media (max-width:640px) {
-        .chat-modal
+        .chat-modal {
+            width: 96vw;
+            height: 82vh;
+        }
 
-    {
-        width: 96vw;
-        height: 82vh;
-    }
-
-    .assistant-bubble, .user-bubble {
-        max-width: 82%;
-    }
-
+        .assistant-bubble, .user-bubble {
+            max-width: 82%;
+        }
     }
 </style>
 
-<div class="chat-modal" role="dialog" aria-label="Asistente de reservas">
+<div id="chat-container" data-user-id="@jsUserId" class="chat-modal" role="dialog" aria-label="Asistente de reservas">
     <div class="chat-header" role="banner">
         <div class="avatar" aria-hidden="true">
             <img src="~/images/icoChatBot.jpg" alt="Amigo Central" />
         </div>
-        <div class="title">Amigo Central</div>
+        <div class="title">
+            Amigo Central
+        </div>
     </div>
 
-    <!-- chatWindow vacío: tu chat.js se encargará de cargar/mostrar mensajes -->
     <div class="chat-body" id="chatWindow" aria-live="polite" aria-atomic="false"></div>
 
     <div class="chat-footer">
@@ -255,16 +260,4 @@
     </div>
 </div>
 
-<!-- placeholder para resumen de reserva (si tu lógica lo utiliza) -->
-<div id="reservationSummaryContainer" class="d-none"></div>
-
-<script>
-    // variables globales que usa tu chat.js
-    window.__CHAT_API = window.__CHAT_API || @Html.Raw(System.Text.Json.JsonSerializer.Serialize("http://localhost:8000/chat"));
-    window.__RESERVAS_API = window.__RESERVAS_API || @Html.Raw(System.Text.Json.JsonSerializer.Serialize("/api/reservas"));
-    window.__USER_ID = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(jsUserId));
-    window.__AUTH_TOKEN = null;
-</script>
-
-<!-- carga tu script original: chat.js hará la comunicación y renderizado -->
 <script src="~/js/chat.js"></script>

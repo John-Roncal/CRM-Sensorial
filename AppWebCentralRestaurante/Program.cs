@@ -12,7 +12,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using AppWebCentralRestaurante.Data;
 using AppWebCentralRestaurante.Models;
-using AppWebCentralRestaurante.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
@@ -54,7 +53,6 @@ builder.Services.AddSession(options =>
 
 // HttpClient and app services
 builder.Services.AddHttpClient();
-builder.Services.AddScoped<RecommendationService>();
 builder.Services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
 
 // Authentication (cookie)

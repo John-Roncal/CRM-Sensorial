@@ -2,9 +2,6 @@ CREATE DATABASE DBCRMSensorialCentral
 GO
 
 USE DBCRMSensorialCentral
-
-
-
 -- Tablas mínimas (nombres y campos en español) para el sistema en SQL Server
 -- 1) Usuarios (Cliente, Mozo, Chef, Admin)
 CREATE TABLE dbo.Usuarios (
@@ -15,7 +12,8 @@ CREATE TABLE dbo.Usuarios (
     Rol NVARCHAR(20) NOT NULL,            -- 'Cliente','Mozo','Chef','Admin'
     EmailConfirmado BIT NOT NULL DEFAULT 0,
     CreadoEn DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-    ActualizadoEn DATETIME2 NULL
+    ActualizadoEn DATETIME2 NULL,
+	FirebaseUid NVARCHAR(200) NULL
 );
 
 ALTER TABLE dbo.Usuarios
@@ -29,6 +27,7 @@ CREATE TABLE dbo.Experiencias (
     Nombre NVARCHAR(250) NOT NULL,         -- ej. 'MENÚ DEGUSTACIÓN'
     DuracionMinutos INT NULL,              -- duración aproximada en minutos
     Descripcion NVARCHAR(1000) NULL,
+	Precio DECIMAL(10,2) NULL,
     Activa BIT NOT NULL DEFAULT 1,
     CreadoEn DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
 );
@@ -91,41 +90,12 @@ CREATE TABLE dbo.Reportes (
     CONSTRAINT FK_Reportes_Admin FOREIGN KEY (AdminId) REFERENCES dbo.Usuarios(Id) ON DELETE NO ACTION
 );
 
-
-ALTER TABLE dbo.Usuarios
-ADD FirebaseUid NVARCHAR(200) NULL;
-
-ALTER TABLE dbo.Experiencias
-ADD Precio DECIMAL(10,2) NULL;
-
-
-
-select * from dbo.Usuarios
-
-
-
-
-
-delete from dbo.RecomendacionesLog
-
-
 INSERT INTO dbo.Experiencias (Codigo, Nombre, DuracionMinutos, Descripcion, Precio)
 VALUES
-  ('01', 'MENÚ DEGUSTACIÓN',                180, 'Una degustación de 12 momentos y 32 preparaciones que recorre el diverso y cambiante Perú: costa, Andes y Amazonía. Cada paso explora un ecosistema distinto, conectando ingredientes, temporadas y territorios.', 1630.00),
-  ('02', 'Inmersión Central + MENÚ DEGUSTACIÓN', 360, 'Acceso exclusivo a los procesos creativos de Central a través de un recorrido por los espacios que lo conforman, culminanando con el menú degustación de 12 momentos (32 preparaciones) y maridaje.', 3653.00),
-  ('03', 'THEOBROMAS LAB',                  120, 'Desde el fruto hasta la barra, esta experiencia revela el proceso detrás de los chocolates que creamos para Central, Kjolle y Mil.En nuestro laboratorio, guiados por el equipo que investiga y produce in situ, exploramos variedades nativas de Theobromas como copoazú, macambo y cacao silvestre. Analizamos, experimentamos, y al final, degustamos.', 1360.00);
-
-  INSERT INTO dbo.Reservas (NombreReserva, NumComensales, ExperienciaId, Restricciones, FechaHora)
-VALUES
-  ('Reserva 6', 2, 3, 'No ajo', '2025-03-11T10:00:00.0000000')
-  
-select * from Reservas
-
-INSERT INTO dbo.Reservas (UsuarioId, NombreReserva, NumComensales, ExperienciaId, Restricciones, FechaHora)
-VALUES
-  (1, 'Reserva 3', 4, 1, 'No mariscos, bajo en sal', '2025-04-11T10:00:00.0000000'),
-  (1, 'Reserva 4', 5, 2, 'No carnes, bajo en sal', '2025-04-11T11:30:00.0000000');
+  ('E1', 'MENÚ DEGUSTACIÓN',                180, 'Una degustación de 12 momentos y 32 preparaciones que recorre el diverso y cambiante Perú: costa, Andes y Amazonía. Cada paso explora un ecosistema distinto, conectando ingredientes, temporadas y territorios.', 1630.00),
+  ('E2', 'Inmersión Central + MENÚ DEGUSTACIÓN', 360, 'Acceso exclusivo a los procesos creativos de Central a través de un recorrido por los espacios que lo conforman, culminanando con el menú degustación de 12 momentos (32 preparaciones) y maridaje.', 3653.00),
+  ('E3', 'THEOBROMAS LAB',                  120, 'Desde el fruto hasta la barra, esta experiencia revela el proceso detrás de los chocolates que creamos para Central, Kjolle y Mil.En nuestro laboratorio, guiados por el equipo que investiga y produce in situ, exploramos variedades nativas de Theobromas como copoazú, macambo y cacao silvestre. Analizamos, experimentamos, y al final, degustamos.', 1360.00);
 
   select * from Usuarios
-
-  update Usuarios set Rol = 'Mozo' where Id = 1
+  select * from Preferencias
+  select * from Reservas

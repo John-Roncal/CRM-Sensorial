@@ -17,7 +17,6 @@ namespace AppWebCentralRestaurante.Data
         public DbSet<Preferencia> Preferencias { get; set; }
         public DbSet<RecomendacionLog> RecomendacionesLog { get; set; }
         public DbSet<AnonSession> AnonSessions { get; set; }
-        public DbSet<Perfile> Perfiles { get; set; }
         public DbSet<Evento> Eventos { get; set; }
 
         public async Task<List<ReservaViewModel>> GetReservasDelDia()
@@ -62,13 +61,6 @@ namespace AppWebCentralRestaurante.Data
                 b.Property(e => e.EventType).IsRequired().HasMaxLength(150);
                 b.HasIndex(e => e.UsuarioId);
                 b.HasIndex(e => e.AnonId);
-            });
-
-            modelBuilder.Entity<Perfile>(b =>
-            {
-                b.HasKey(p => p.PerfilId);
-                b.HasIndex(p => p.UsuarioId).IsUnique(false);
-                b.HasIndex(p => p.AnonId).IsUnique(false);
             });
 
             modelBuilder.Entity<Preferencia>(b =>
