@@ -5,16 +5,11 @@
     var currentController = (ViewContext.RouteData.Values["controller"] ?? "").ToString();
     var currentAction = (ViewContext.RouteData.Values["action"] ?? "").ToString();
 
-    // href para Reserva (si está autenticado va a Chat/Index, si no al flujo de registro)
-    var reservaHref = User?.Identity?.IsAuthenticated == true
-        ? Url.Action("Index", "Chat")
-        : Url.Action("TresPreguntas", "Registro");
+    var reservaHref = Url.Action("Index", "Chat");
 
-    // lógica para seleccionar el link "Reserva" como activo también cuando la ruta es Registro/TresPreguntas
-    bool isReservaActive = currentController == "Chat" || (currentController == "Registro" && string.Equals(currentAction, "TresPreguntas", System.StringComparison.OrdinalIgnoreCase));
+    bool isReservaActive = currentController == "Chat";
 
-    // registrarse activo sólo si está en Registro y NO en TresPreguntas
-    bool isRegistrarseActive = currentController == "Registro" && !string.Equals(currentAction, "TresPreguntas", System.StringComparison.OrdinalIgnoreCase);
+    bool isRegistrarseActive = currentController == "Registro";
 }
 
 <!DOCTYPE html>
@@ -26,31 +21,27 @@
     <title>@(ViewData["Title"] ?? "Inicio") - Central Restaurante</title>
     <meta name="csrf-token" content="@Xsrf.GetAndStoreTokens(ViewContext.HttpContext).RequestToken" />
 
-    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="icon" href="~/favicon.ico" asp-append-version="true" />
 
     <style>
-        /* NAVBAR: apariencia inspirada en la imagen enviada */
         .navbar-custom {
-            background: rgba(28,28,28,0.88); /* oscuro pero ligeramente transparente */
-            min-height: 86px; /* más alto verticalmente */
+            background: rgba(28,28,28,0.88);
+            min-height: 86px;
             border-bottom: 1px solid rgba(255,255,255,0.03);
-            backdrop-filter: blur(2px); /* sutil */
+            backdrop-filter: blur(2px);
         }
 
-        /* marca como imagen */
         .navbar-brand img {
-            height: 64px; /* ajusta a tu PNG */
+            height: 64px;
             object-fit: contain;
             display: block;
         }
 
-        /* Nav links estilo limpio y espaciado */
         .navbar-custom .navbar-nav {
-            gap: 1.6rem; /* separación horizontal entre items */
+            gap: 1.6rem;
             align-items: center;
         }
 
@@ -66,7 +57,6 @@
                 opacity: 0.95;
             }
 
-            /* active: borde inferior sutil o color distinto */
             .navbar-custom .nav-link.active {
                 color: #ffffff;
                 position: relative;
@@ -84,18 +74,15 @@
                     border-radius: 2px;
                 }
 
-        /* usuario (derecha) */
         .navbar-custom .dropdown-toggle {
             display: inline-flex;
             align-items: center;
         }
 
-        /* reduce sombra del sticky-top y no ocupe mucho */
         .navbar-custom.shadow-sm {
             box-shadow: 0 1px 8px rgba(0,0,0,0.18);
         }
 
-        /* responsive tweaks */
         @@media (max-width: 991.98px) {
             .navbar-brand img
 
@@ -114,17 +101,14 @@
 
         }
 
-        /* si tu layout tiene body background, mantener contraste con navbar */
         body {
             background-color: #f8f9fa;
         }
-        /* deja que tu app controle el body si necesitas otra cosa */
     </style>
 </head>
 <body class="d-flex flex-column min-vh-100">
     <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top shadow-sm" role="navigation">
         <div class="container">
-            <!-- Brand: imagen PNG, link a Home/Index -->
             <a class="navbar-brand d-flex align-items-center" asp-controller="Home" asp-action="Index">
                 <img src="~/images/logo2_sf.png" alt="Central Restaurante" />
             </a>
@@ -135,7 +119,6 @@
             </button>
 
             <div class="collapse navbar-collapse" id="mainNav">
-                <!-- main links: centrados con mx-auto -->
                 <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
                     <li class="nav-item">
                         <a class="nav-link @(currentController == "Home" && currentAction == "Historia" ? "active" : "")"
@@ -153,7 +136,6 @@
                     </li>
                 </ul>
 
-                <!-- user/auth links: a la derecha -->
                 <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                     @if (User?.Identity != null && User.Identity.IsAuthenticated)
                     {
@@ -235,7 +217,6 @@
         @RenderBody()
     </main>
 
-    <!-- Scripts (igual que antes) -->
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script>
         window.jQuery || document.write('<script src="/lib/jquery/dist/jquery.min.js"><\/script>');
